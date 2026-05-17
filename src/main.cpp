@@ -2445,6 +2445,7 @@ void checkWebPortalTimeout() {
   }
 }
 
+
 void loop() {
   webPortalProcess();
   checkWebPortalTimeout();
