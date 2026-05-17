@@ -1,4 +1,5 @@
 #include "storage.h"
+#include "wifi_settings.h"
 
 // =====================================================
 // PIN-Hash aus Flash laden
@@ -135,4 +136,6 @@ void clearAllStoredData() {
   preferences.begin("portal", false);
   preferences.clear();
   preferences.end();
+
+  wifiSettingsClear();
 }

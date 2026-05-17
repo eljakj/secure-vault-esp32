@@ -7,6 +7,7 @@
 
 #include "vault_model.h"
 #include "password_generator.h"
+#include "wifi_settings.h"
 
 extern Preferences preferences;
 
@@ -82,6 +83,7 @@ static String pageHeader(const String& title) {
   html += "<div class='top'>";
   html += "<a class='btn' href='/'>Vault</a>";
   html += "<a class='btn' href='/add'>Add Entry</a>";
+  html += "<a class='btn secondary' href='/wifi'>Wi-Fi</a>";
   html += "<a class='btn secondary' href='/info'>Info</a>";
   html += "</div>";
   return html;
@@ -380,6 +382,95 @@ static void handleDeleteConfirm() {
   server.send(303);
 }
 
+
+// =====================================================
+// Wi-Fi Settings Form
+// =====================================================
+
+static void handleWifiSettings() {
+  webPortalMarkActivity();
+
+  String html = pageHeader("Wi-Fi Settings");
+
+  html += "<div class='card'>";
+  html += "<h2>TOTP Time Sync Wi-Fi</h2>";
+  html += "<p class='muted'>These credentials are used only for NTP time sync for TOTP.</p>";
+
+  html += "<form method='POST' action='/wifi_save'>";
+
+  html += "<label>Wi-Fi SSID</label>";
+  html += "<input name='ssid' maxlength='63' value='";
+  html += htmlEscape(wifiSettingsGetSsid());
+  html += "' placeholder='Your Wi-Fi name'>";
+
+  html += "<label>Wi-Fi Password</label>";
+  html += "<input name='password' maxlength='95' type='password' value='";
+  html += htmlEscape(wifiSettingsGetPassword());
+  html += "' placeholder='Your Wi-Fi password'>";
+
+  html += "<div class='actions'>";
+  html += "<button class='btn' type='submit'>Save Wi-Fi</button>";
+  html += "<a class='btn secondary' href='/'>Cancel</a>";
+  html += "</div>";
+
+  html += "</form>";
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<h2>Status</h2>";
+
+  if (wifiSettingsHasCredentials()) {
+    html += "<p>Wi-Fi credentials are saved.</p>";
+  } else {
+    html += "<p class='muted'>No Wi-Fi credentials saved yet.</p>";
+  }
+
+  html += "</div>";
+
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+// =====================================================
+// Wi-Fi Settings speichern
+// =====================================================
+
+static void handleWifiSave() {
+  webPortalMarkActivity();
+
+  String ssid = server.arg("ssid");
+  String password = server.arg("password");
+
+  ssid.trim();
+  password.trim();
+
+  if (ssid.length() == 0 || password.length() == 0) {
+    String html = pageHeader("Wi-Fi Error");
+    html += "<div class='card'>";
+    html += "<h2>SSID and password are required.</h2>";
+    html += urlBack();
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
+  }
+
+  wifiSettingsSave(ssid.c_str(), password.c_str());
+
+  String html = pageHeader("Wi-Fi Saved");
+  html += "<div class='card'>";
+  html += "<h2>Wi-Fi settings saved.</h2>";
+  html += "<p class='muted'>Now TOTP time sync can use this Wi-Fi.</p>";
+  html += "<p><a class='btn' href='/'>Back to Vault</a></p>";
+  html += "</div>";
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+
 // =====================================================
 // Info
 // =====================================================
@@ -391,9 +482,44 @@ static void handleInfo() {
 
   html += "<div class='card'>";
   html += "<h2>SecureVault Local Web Portal</h2>";
-  html += "<p>No cloud. This page is served directly from the ESP32.</p>";
-  html += "<p class='muted'>Important: storage is not encrypted yet. Next step is encryption.</p>";
-  html += "</div>" + pageFooter();
+  html += "<p>This web portal runs directly on the ESP32 device.</p>";
+  html += "<p>No cloud. No external account. No remote server.</p>";
+  html += "<p class='muted'>The portal automatically stops after 10 minutes without activity.</p>";
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<h2>Current Portal Wi-Fi</h2>";
+  html += "<p><strong>SSID:</strong> ";
+  html += htmlEscape(webPortalGetSsid());
+  html += "</p>";
+
+  html += "<p><strong>Password:</strong></p>";
+  html += "<input id='portalPass' readonly value='";
+  html += htmlEscape(webPortalGetPassword());
+  html += "'>";
+
+  html += "<div class='actions'>";
+  html += "<button class='btn' onclick='copyPass()' type='button'>Copy Password</button>";
+  html += "</div>";
+
+  html += "<p class='muted'>If your phone or PC already remembered an old password, use Forget Network once.</p>";
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<h2>Security Status</h2>";
+  html += "<p class='muted'>Important: vault storage is not encrypted yet. The next big step is encrypted storage.</p>";
+  html += "</div>";
+
+  html += "<script>";
+  html += "function copyPass(){";
+  html += "var p=document.getElementById('portalPass');";
+  html += "p.select();";
+  html += "p.setSelectionRange(0,99999);";
+  html += "navigator.clipboard&&navigator.clipboard.writeText(p.value);";
+  html += "}";
+  html += "</script>";
+
+  html += pageFooter();
 
   server.send(200, "text/html", html);
 }
@@ -430,6 +556,8 @@ bool webPortalStart() {
   server.on("/", HTTP_GET, handleRoot);
   server.on("/add", HTTP_GET, handleAdd);
   server.on("/edit", HTTP_GET, handleEdit);
+  server.on("/wifi", HTTP_GET, handleWifiSettings);
+  server.on("/wifi_save", HTTP_POST, handleWifiSave);
   server.on("/save_add", HTTP_POST, handleSaveAdd);
   server.on("/save_edit", HTTP_POST, handleSaveEdit);
   server.on("/delete", HTTP_GET, handleDelete);

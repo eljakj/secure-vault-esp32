@@ -10,6 +10,7 @@
 #include "totp_manager.h"
 #include "hid_manager.h"
 #include "password_generator.h"
+#include "wifi_settings.h"
 
 // =====================================================
 // Globale Objekte
@@ -1073,7 +1074,14 @@ void typeCurrentTotpCode() {
 void syncTotpTime() {
   drawTotpView(true, "");
 
-  bool ok = totpSyncTimeWithWiFi(WIFI_SSID, WIFI_PASSWORD);
+  bool ok = false;
+
+  if (wifiSettingsHasCredentials()) {
+    ok = totpSyncTimeWithWiFi(
+      wifiSettingsGetSsid(),
+      wifiSettingsGetPassword()
+    );
+  }
 
   if (ok) {
     drawTotpView(false, "");
@@ -2423,8 +2431,10 @@ void setup() {
   hidBegin();
   loadKeyboardLayoutFromFlash();
   totpBegin();
+  wifiSettingsLoad();
 
   loadPinHashFromFlash(storedPinHash);
+
 
   // Vault-Einträge aus Flash laden
   vaultLoadFromFlash();

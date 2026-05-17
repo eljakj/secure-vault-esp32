@@ -20,7 +20,9 @@
 // Zum Testen von Upload/COM: 1
 // Zum Testen von Auto-Type: 0
 //
+#ifndef SECUREVAULT_DEV_MODE
 #define SECUREVAULT_DEV_MODE 1
+#endif
 
 // =====================================================
 // Hardware: LILYGO T-Display-S3
