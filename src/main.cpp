@@ -1121,17 +1121,31 @@ void drawWebPortalScreen(const char* message) {
   tft.println(webPortalGetSsid());
 
   tft.setCursor(10, 160);
-  tft.print("PASS: ");
-  tft.println(webPortalGetPassword());
+  tft.println("PASS:");
+
+  const char* portalPass = webPortalGetPassword();
+
+  tft.setTextSize(1);
+  tft.setCursor(10, 175);
+
+  for (int i = 0; portalPass[i] != '\0'; i++) {
+    tft.print(portalPass[i]);
+
+    if (i == 7) {
+      tft.println();
+      tft.setCursor(10, 190);
+    } else if (i == 3 || i == 11) {
+      tft.print("-");
+    }
+  }
 
   tft.setTextColor(COLOR_TEXT, COLOR_BG);
-  tft.setCursor(10, 195);
+  tft.setCursor(10, 215);
   tft.print("Open: ");
   tft.println(webPortalGetIp());
 
   tft.setTextColor(COLOR_MUTED, COLOR_BG);
-  tft.setCursor(10, 230);
-  tft.println("Usually:");
+  tft.setCursor(10, 240);
   tft.println("http://192.168.4.1");
 
   tft.setCursor(10, 260);
