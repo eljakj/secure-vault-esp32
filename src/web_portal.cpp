@@ -130,7 +130,7 @@ static String loadOrCreatePortalPassword() {
 
 static void handleRoot() {
   webPortalMarkActivity();
-  
+
   String html = pageHeader("SecureVault Web Portal");
 
   html += "<div class='card'>";
@@ -238,10 +238,12 @@ static void handleAddEditForm(bool editMode) {
 }
 
 static void handleAdd() {
+  webPortalMarkActivity();
   handleAddEditForm(false);
 }
 
 static void handleEdit() {
+  webPortalMarkActivity();
   handleAddEditForm(true);
 }
 
@@ -250,6 +252,8 @@ static void handleEdit() {
 // =====================================================
 
 static void handleSaveAdd() {
+  webPortalMarkActivity();
+
   String title = server.arg("title");
   String username = server.arg("username");
   String password = server.arg("password");
@@ -293,6 +297,8 @@ static void handleSaveAdd() {
 // =====================================================
 
 static void handleSaveEdit() {
+  webPortalMarkActivity();
+
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
     return;
@@ -334,6 +340,8 @@ static void handleSaveEdit() {
 // =====================================================
 
 static void handleDelete() {
+  webPortalMarkActivity();
+
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
     return;
@@ -358,6 +366,8 @@ static void handleDelete() {
 }
 
 static void handleDeleteConfirm() {
+  webPortalMarkActivity();
+
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
     return;
@@ -375,6 +385,8 @@ static void handleDeleteConfirm() {
 // =====================================================
 
 static void handleInfo() {
+  webPortalMarkActivity();
+
   String html = pageHeader("Info");
 
   html += "<div class='card'>";
@@ -433,6 +445,7 @@ bool webPortalStart() {
   server.begin();
 
   portalActive = true;
+  webPortalMarkActivity();
   return true;
 }
 

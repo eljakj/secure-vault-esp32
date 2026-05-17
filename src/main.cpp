@@ -106,15 +106,7 @@ int factoryResetConfirmStep = 0;
 // Portal stoppt nach 10 Minuten ohne Aktivität
 const unsigned long WEB_PORTAL_TIMEOUT_MS = 10UL * 60UL * 1000UL;
 
-unsigned long lastWebPortalActivityTime = 0;
 
-// =====================================================
-// Web Portal Aktivität merken
-// =====================================================
-
-void markWebPortalActivity() {
-  lastWebPortalActivityTime = millis();
-}
 
 // =====================================================
 // Keyboard Layout speichern/laden
@@ -1163,7 +1155,7 @@ void startWebPortalFromUi() {
   bool ok = webPortalStart();
 
   if (ok) {
-    markWebPortalActivity();
+    webPortalMarkActivity();
     drawWebPortalScreen();
   } else {
     drawWebPortalScreen("AP start failed.");
@@ -2100,7 +2092,7 @@ void handleTotpInput(ButtonEvent event) {
 
 
 void handleWebPortalInput(ButtonEvent event) {
-  markWebPortalActivity();
+  webPortalMarkActivity();
 
   if (event == BUTTON_SELECT_SHORT) {
     if (!webPortalIsActive()) {
@@ -2442,8 +2434,9 @@ void checkWebPortalTimeout() {
   }
 
   unsigned long now = millis();
+  unsigned long lastActivity = webPortalGetLastActivityTime();
 
-  if (now - lastWebPortalActivityTime >= WEB_PORTAL_TIMEOUT_MS) {
+  if (now - lastActivity >= WEB_PORTAL_TIMEOUT_MS) {
     webPortalStop();
 
     if (currentScreen == SCREEN_WEB_PORTAL) {
