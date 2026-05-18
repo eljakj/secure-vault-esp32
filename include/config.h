@@ -2,24 +2,23 @@
 
 #include <TFT_eSPI.h>
 
-
 // =====================================================
 // DEV / PRODUCT MODE
 // =====================================================
 //
-// 1 = Entwicklungsmodus:
-//     - USB HID Keyboard ist deaktiviert
-//     - COM-Port / Upload ist meistens einfacher
-//     - Auto-Type zeigt nur "disabled"
+// SECUREVAULT_DEV_MODE kommt normalerweise aus platformio.ini:
 //
-// 0 = Produktmodus:
-//     - USB HID Keyboard ist aktiv
-//     - Auto-Type funktioniert
-//     - COM-Port kann nach Reset verschwinden, weil Gerät als Keyboard startet
+// -DSECUREVAULT_DEV_MODE=1
+//   Entwicklungsmodus:
+//   - USB HID Keyboard ist deaktiviert
+//   - COM-Port / Upload ist einfacher
 //
-// Zum Testen von Upload/COM: 1
-// Zum Testen von Auto-Type: 0
+// -DSECUREVAULT_DEV_MODE=0
+//   Produkt/Test-Modus:
+//   - USB HID Keyboard ist aktiv
+//   - Auto-Type funktioniert
 //
+
 #ifndef SECUREVAULT_DEV_MODE
 #define SECUREVAULT_DEV_MODE 1
 #endif
@@ -72,12 +71,3 @@ const unsigned long PIN_LOCKOUT_MS = 30000;
 const char DEFAULT_PIN_HASH[] =
   "03ac674216f3e15c761ee1a5e255f067"
   "953623c8b388b4459e13f978d7c846f4";
-
-
-// =====================================================
-// Wi-Fi für TOTP-Zeit-Sync
-// WICHTIG: Für echte Produkte später nicht fest im Code speichern.
-// =====================================================
-
-const char WIFI_SSID[] = "YOUR_WIFI_NAME";
-const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
