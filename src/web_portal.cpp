@@ -9,6 +9,9 @@
 #include "password_generator.h"
 #include "wifi_settings.h"
 
+#include "totp_settings.h"
+#include "totp_manager.h"
+
 extern Preferences preferences;
 
 // =====================================================
@@ -84,6 +87,7 @@ static String pageHeader(const String& title) {
   html += "<a class='btn' href='/'>Vault</a>";
   html += "<a class='btn' href='/add'>Add Entry</a>";
   html += "<a class='btn secondary' href='/wifi'>Wi-Fi</a>";
+  html += "<a class='btn secondary' href='/totp'>TOTP</a>";
   html += "<a class='btn secondary' href='/info'>Info</a>";
   html += "</div>";
   return html;
@@ -472,6 +476,134 @@ static void handleWifiSave() {
 
 
 // =====================================================
+// TOTP Settings Form
+// =====================================================
+
+static void handleTotpSettings() {
+  webPortalMarkActivity();
+
+  String html = pageHeader("TOTP Settings");
+
+  html += "<div class='card'>";
+  html += "<h2>Authenticator / 2FA</h2>";
+  html += "<p class='muted'>Add one Base32 TOTP secret for now. More accounts later.</p>";
+
+  html += "<form method='POST' action='/totp_save'>";
+
+  html += "<label>Label</label>";
+  html += "<input name='label' maxlength='31' value='";
+  html += htmlEscape(totpSettingsGetLabel());
+  html += "' placeholder='Example: Gmail'>";
+
+  html += "<label>Base32 Secret</label>";
+  html += "<input name='secret' maxlength='127' value='";
+  html += htmlEscape(totpSettingsGetBase32Secret());
+  html += "' placeholder='ABCD EFGH IJKL MNOP'>";
+
+  html += "<p class='muted'>Use the Base32 secret from your 2FA setup. Spaces are okay.</p>";
+
+  html += "<div class='actions'>";
+  html += "<button class='btn' type='submit'>Save TOTP</button>";
+  html += "<a class='btn danger' href='/totp_clear'>Clear</a>";
+  html += "<a class='btn secondary' href='/'>Cancel</a>";
+  html += "</div>";
+
+  html += "</form>";
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<h2>Status</h2>";
+
+  if (totpSettingsHasSecret()) {
+    html += "<p>TOTP secret is saved.</p>";
+    html += "<p><strong>Current label:</strong> ";
+    html += htmlEscape(totpSettingsGetLabel());
+    html += "</p>";
+  } else {
+    html += "<p class='muted'>No TOTP secret saved yet.</p>";
+  }
+
+  html += "</div>";
+
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+// =====================================================
+// TOTP Settings speichern
+// =====================================================
+
+static void handleTotpSave() {
+  webPortalMarkActivity();
+
+  String label = server.arg("label");
+  String secret = server.arg("secret");
+
+  label.trim();
+  secret.trim();
+
+  if (label.length() == 0) {
+    label = "TOTP";
+  }
+
+  if (secret.length() == 0) {
+    String html = pageHeader("TOTP Error");
+    html += "<div class='card'>";
+    html += "<h2>Base32 secret is required.</h2>";
+    html += urlBack();
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
+  }
+
+  totpSettingsSave(label.c_str(), secret.c_str());
+
+  // Secret neu in den TOTP Manager laden
+  bool ok = totpBegin();
+
+  String html = pageHeader("TOTP Saved");
+  html += "<div class='card'>";
+
+  if (ok) {
+    html += "<h2>TOTP settings saved.</h2>";
+    html += "<p class='muted'>Now open TOTP on the device and sync time if needed.</p>";
+  } else {
+    html += "<h2>TOTP saved, but secret looks invalid.</h2>";
+    html += "<p class='muted'>Check the Base32 secret.</p>";
+  }
+
+  html += "<p><a class='btn' href='/totp'>Back to TOTP</a></p>";
+  html += "</div>";
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+// =====================================================
+// TOTP Settings löschen
+// =====================================================
+
+static void handleTotpClear() {
+  webPortalMarkActivity();
+
+  totpSettingsClear();
+  totpBegin();
+
+  String html = pageHeader("TOTP Cleared");
+  html += "<div class='card'>";
+  html += "<h2>TOTP settings cleared.</h2>";
+  html += "<p><a class='btn' href='/totp'>Back to TOTP</a></p>";
+  html += "</div>";
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+
+// =====================================================
 // Info
 // =====================================================
 
@@ -558,6 +690,9 @@ bool webPortalStart() {
   server.on("/edit", HTTP_GET, handleEdit);
   server.on("/wifi", HTTP_GET, handleWifiSettings);
   server.on("/wifi_save", HTTP_POST, handleWifiSave);
+  server.on("/totp", HTTP_GET, handleTotpSettings);
+  server.on("/totp_save", HTTP_POST, handleTotpSave);
+  server.on("/totp_clear", HTTP_GET, handleTotpClear);
   server.on("/save_add", HTTP_POST, handleSaveAdd);
   server.on("/save_edit", HTTP_POST, handleSaveEdit);
   server.on("/delete", HTTP_GET, handleDelete);
