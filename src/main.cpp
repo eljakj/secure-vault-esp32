@@ -8,6 +8,7 @@
 #include "vault_model.h"
 #include "web_portal.h"
 #include "totp_manager.h"
+#include "totp_settings.h"
 #include "hid_manager.h"
 #include "password_generator.h"
 #include "wifi_settings.h"
@@ -970,6 +971,22 @@ void drawTotpView(bool syncing, const char* message) {
   currentScreen = SCREEN_TOTP_VIEW;
 
   drawHeader("TOTP", totpGetLabel());
+
+  if (!totpHasSecret()) {
+    tft.setTextColor(COLOR_TEXT, COLOR_BG);
+    tft.setTextSize(1);
+    tft.setCursor(10, 110);
+    tft.println("No TOTP secret saved.");
+
+    tft.setTextColor(COLOR_MUTED, COLOR_BG);
+    tft.setCursor(10, 150);
+    tft.println("Use Web Portal");
+    tft.println("to add a TOTP");
+    tft.println("Base32 secret.");
+
+    drawFooter("WEB PORTAL", "BACK");
+    return;
+  }
 
   if (syncing) {
     tft.setTextColor(COLOR_TEXT, COLOR_BG);
@@ -2430,8 +2447,10 @@ void setup() {
   buttonsBegin();
   hidBegin();
   loadKeyboardLayoutFromFlash();
-  totpBegin();
+
   wifiSettingsLoad();
+  totpSettingsLoad();
+  totpBegin();
 
   loadPinHashFromFlash(storedPinHash);
 

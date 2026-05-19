@@ -4,6 +4,8 @@
 #include <time.h>
 #include "mbedtls/md.h"
 
+#include "totp_settings.h"
+
 // =====================================================
 // Demo-TOTP Secret
 // WICHTIG: Für echtes Produkt nicht im Code hardcoden.
@@ -11,8 +13,6 @@
 // Demo-Secret: "Hello!" Base32 = JBSWY3DPEHPK3PXP
 // =====================================================
 
-static const char* TOTP_LABEL = "Google TOTP";
-static const char* TOTP_SECRET_BASE32 = "JBSWY3DPEHPK3PXP";
 
 static uint8_t totpSecret[64];
 static size_t totpSecretLen = 0;
@@ -76,7 +76,22 @@ static size_t decodeBase32(const char* input, uint8_t* output, size_t maxOutputL
 // =====================================================
 
 bool totpBegin() {
-  totpSecretLen = decodeBase32(TOTP_SECRET_BASE32, totpSecret, sizeof(totpSecret));
+  totpSecretLen = 0;
+
+  if (!totpSettingsHasSecret()) {
+    return false;
+  }
+
+  totpSecretLen = decodeBase32(
+    totpSettingsGetBase32Secret(),
+    totpSecret,
+    sizeof(totpSecret)
+  );
+
+  return totpSecretLen > 0;
+}
+
+bool totpHasSecret() {
   return totpSecretLen > 0;
 }
 
@@ -205,5 +220,5 @@ int totpGetSecondsRemaining() {
 }
 
 const char* totpGetLabel() {
-  return TOTP_LABEL;
+  return totpSettingsGetLabel();
 }

@@ -1,6 +1,8 @@
 #include "storage.h"
 #include "wifi_settings.h"
 
+#include "totp_settings.h"
+
 // =====================================================
 // PIN-Hash aus Flash laden
 // =====================================================
@@ -138,4 +140,5 @@ void clearAllStoredData() {
   preferences.end();
 
   wifiSettingsClear();
+  totpSettingsClear();
 }
