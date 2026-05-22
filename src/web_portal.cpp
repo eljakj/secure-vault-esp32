@@ -8,9 +8,9 @@
 #include "vault_model.h"
 #include "password_generator.h"
 #include "wifi_settings.h"
-
 #include "totp_settings.h"
 #include "totp_manager.h"
+#include "crypto_utils.h"
 
 extern Preferences preferences;
 
@@ -29,6 +29,10 @@ static String portalPassword = "";
 static String portalIp = "192.168.4.1";
 static unsigned long lastPortalActivityTime = 0;
 
+// Portal Login
+static bool portalAuthenticated = false;
+static char portalPinHash[65] = "";
+
 static const char* PORTAL_SSID = "SecureVault-Setup";
 
 // =====================================================
@@ -41,6 +45,113 @@ void webPortalMarkActivity() {
 
 unsigned long webPortalGetLastActivityTime() {
   return lastPortalActivityTime;
+}
+
+// =====================================================
+// Web Portal PIN/Login
+// =====================================================
+
+void webPortalSetPinHash(const char* pinHash) {
+  if (pinHash == nullptr) {
+    portalPinHash[0] = '\0';
+    return;
+  }
+
+  strncpy(portalPinHash, pinHash, sizeof(portalPinHash) - 1);
+  portalPinHash[sizeof(portalPinHash) - 1] = '\0';
+}
+
+void webPortalLogout() {
+  portalAuthenticated = false;
+}
+
+static bool webPortalCheckPin(const String& pin) {
+  if (pin.length() != 4) {
+    return false;
+  }
+
+  if (strlen(portalPinHash) != 64) {
+    return false;
+  }
+
+  char inputHash[65];
+  hashPin(pin.c_str(), inputHash);
+
+  return strcmp(inputHash, portalPinHash) == 0;
+}
+
+static void sendLoginPage(const char* message = "") {
+  String html = "";
+  html += "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>";
+  html += "<title>SecureVault Login</title>";
+  html += "<style>";
+  html += "body{margin:0;background:#0b0b0b;color:#f5f5f5;font-family:Arial,sans-serif;padding:22px;}";
+  html += ".wrap{max-width:420px;margin:0 auto;}";
+  html += ".card{background:#161616;border:1px solid #2a2a2a;border-radius:18px;padding:22px;margin-top:30px;}";
+  html += "h1{text-align:center;font-size:26px;margin:0 0 18px;}";
+  html += "label{display:block;margin:12px 0 6px;color:#d0d0d0;font-weight:700;}";
+  html += "input{width:100%;box-sizing:border-box;padding:14px;border-radius:12px;border:1px solid #333;background:#0e0e0e;color:#fff;font-size:20px;text-align:center;letter-spacing:8px;}";
+  html += ".btn{width:100%;border:0;border-radius:12px;padding:13px 14px;background:#2979ff;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;margin-top:16px;font-size:16px;}";
+  html += ".muted{color:#aaa;font-size:14px;line-height:1.4;}";
+  html += ".error{color:#ff6b6b;font-weight:700;}";
+  html += "</style></head><body><div class='wrap'>";
+  html += "<div class='card'>";
+  html += "<h1>SecureVault</h1>";
+  html += "<p class='muted'>Enter device PIN to unlock the local web portal.</p>";
+
+  if (message != nullptr && message[0] != '\0') {
+    html += "<p class='error'>";
+    html += message;
+    html += "</p>";
+  }
+
+  html += "<form method='POST' action='/login_submit'>";
+  html += "<label>PIN</label>";
+  html += "<input name='pin' inputmode='numeric' maxlength='4' type='password' autofocus>";
+  html += "<button class='btn' type='submit'>Unlock Web Portal</button>";
+  html += "</form>";
+
+  html += "<p class='muted'>No cloud. This page runs directly on the ESP32.</p>";
+  html += "</div></div></body></html>";
+
+  server.send(200, "text/html", html);
+}
+
+static bool requirePortalLogin() {
+  if (portalAuthenticated) {
+    return true;
+  }
+
+  sendLoginPage();
+  return false;
+}
+
+static void handleLogin() {
+  webPortalMarkActivity();
+  sendLoginPage();
+}
+
+static void handleLoginSubmit() {
+  webPortalMarkActivity();
+
+  String pin = server.arg("pin");
+  pin.trim();
+
+  if (webPortalCheckPin(pin)) {
+    portalAuthenticated = true;
+    server.sendHeader("Location", "/");
+    server.send(303);
+    return;
+  }
+
+  portalAuthenticated = false;
+  sendLoginPage("Wrong PIN.");
+}
+
+static void handleLogout() {
+  webPortalMarkActivity();
+  portalAuthenticated = false;
+  sendLoginPage("Logged out.");
 }
 
 // =====================================================
@@ -89,6 +200,7 @@ static String pageHeader(const String& title) {
   html += "<a class='btn secondary' href='/wifi'>Wi-Fi</a>";
   html += "<a class='btn secondary' href='/totp'>TOTP</a>";
   html += "<a class='btn secondary' href='/info'>Info</a>";
+  html += "<a class='btn danger' href='/logout'>Logout</a>";
   html += "</div>";
   return html;
 }
@@ -136,6 +248,7 @@ static String loadOrCreatePortalPassword() {
 
 static void handleRoot() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   String html = pageHeader("SecureVault Web Portal");
 
@@ -245,11 +358,15 @@ static void handleAddEditForm(bool editMode) {
 
 static void handleAdd() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
+
   handleAddEditForm(false);
 }
 
 static void handleEdit() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
+
   handleAddEditForm(true);
 }
 
@@ -259,6 +376,7 @@ static void handleEdit() {
 
 static void handleSaveAdd() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   String title = server.arg("title");
   String username = server.arg("username");
@@ -304,6 +422,7 @@ static void handleSaveAdd() {
 
 static void handleSaveEdit() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -347,6 +466,7 @@ static void handleSaveEdit() {
 
 static void handleDelete() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -373,6 +493,7 @@ static void handleDelete() {
 
 static void handleDeleteConfirm() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -386,13 +507,13 @@ static void handleDeleteConfirm() {
   server.send(303);
 }
 
-
 // =====================================================
 // Wi-Fi Settings Form
 // =====================================================
 
 static void handleWifiSettings() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   String html = pageHeader("Wi-Fi Settings");
 
@@ -442,6 +563,7 @@ static void handleWifiSettings() {
 
 static void handleWifiSave() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   String ssid = server.arg("ssid");
   String password = server.arg("password");
@@ -474,13 +596,13 @@ static void handleWifiSave() {
   server.send(200, "text/html", html);
 }
 
-
 // =====================================================
 // TOTP Settings Form
 // =====================================================
 
 static void handleTotpSettings() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   String html = pageHeader("TOTP Settings");
 
@@ -536,6 +658,7 @@ static void handleTotpSettings() {
 
 static void handleTotpSave() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   String label = server.arg("label");
   String secret = server.arg("secret");
@@ -588,6 +711,7 @@ static void handleTotpSave() {
 
 static void handleTotpClear() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   totpSettingsClear();
   totpBegin();
@@ -602,13 +726,13 @@ static void handleTotpClear() {
   server.send(200, "text/html", html);
 }
 
-
 // =====================================================
 // Info
 // =====================================================
 
 static void handleInfo() {
   webPortalMarkActivity();
+  if (!requirePortalLogin()) return;
 
   String html = pageHeader("Info");
 
@@ -666,6 +790,7 @@ bool webPortalStart() {
   }
 
   portalPassword = loadOrCreatePortalPassword();
+  portalAuthenticated = false;
 
   WiFi.disconnect(true, true);
   WiFi.softAPdisconnect(true);
@@ -684,6 +809,10 @@ bool webPortalStart() {
   portalIp = WiFi.softAPIP().toString();
 
   dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+
+  server.on("/login", HTTP_GET, handleLogin);
+  server.on("/login_submit", HTTP_POST, handleLoginSubmit);
+  server.on("/logout", HTTP_GET, handleLogout);
 
   server.on("/", HTTP_GET, handleRoot);
   server.on("/add", HTTP_GET, handleAdd);
@@ -724,6 +853,7 @@ void webPortalStop() {
   WiFi.mode(WIFI_OFF);
 
   portalActive = false;
+  portalAuthenticated = false;
 }
 
 void webPortalProcess() {

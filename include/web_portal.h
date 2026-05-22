@@ -12,6 +12,13 @@ const char* webPortalGetPassword();
 const char* webPortalGetIp();
 
 // =====================================================
+// Web Portal PIN/Login
+// =====================================================
+
+void webPortalSetPinHash(const char* pinHash);
+void webPortalLogout();
+
+// =====================================================
 // Web Portal Aktivität
 // =====================================================
 

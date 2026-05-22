@@ -1191,6 +1191,8 @@ void drawWebPortalScreen(const char* message) {
 void startWebPortalFromUi() {
   drawWebPortalScreen("Starting...");
 
+  webPortalSetPinHash(storedPinHash);
+
   bool ok = webPortalStart();
 
   if (ok) {
