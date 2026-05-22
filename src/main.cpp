@@ -12,6 +12,7 @@
 #include "hid_manager.h"
 #include "password_generator.h"
 #include "wifi_settings.h"
+#include "master_key.h"
 
 // =====================================================
 // Globale Objekte
@@ -76,7 +77,8 @@ unsigned long lastUserActivityTime = 0;
 // =====================================================
 
 const char* menuItems[] = {"Vault", "TOTP", "Add", "Settings", "Lock"};
-const char* menuSubtitles[] = {"Passwords", "2FA codes", "New entry", "Device config", "Secure device"};
+const char* menuSubtitles[] = {"Passwords", "2FA codes", "New entry", "Device config",
+                               "Secure device"};
 
 const int menuCount = 5;
 int selectedMenuItem = 0;
@@ -87,8 +89,10 @@ const int visibleMenuRows = 4;
 // Settings
 // =====================================================
 
-const char* settingsItems[] = {"Web Portal", "Change PIN", "Auto Lock", "Keyboard", "Factory Reset", "About"};
-const char* settingsSubtitles[] = {"Manage vault", "Set new PIN", "60 sec", "US / DE", "Erase device", "Device info"};
+const char* settingsItems[] = {"Web Portal", "Change PIN",    "Auto Lock",
+                               "Keyboard",   "Factory Reset", "About"};
+const char* settingsSubtitles[] = {"Manage vault", "Set new PIN",  "60 sec",
+                                   "US / DE",      "Erase device", "Device info"};
 
 const int settingsCount = 6;
 int selectedSettingsItem = 0;
@@ -107,8 +111,6 @@ int factoryResetConfirmStep = 0;
 
 // Portal stoppt nach 10 Minuten ohne Aktivität
 const unsigned long WEB_PORTAL_TIMEOUT_MS = 10UL * 60UL * 1000UL;
-
-
 
 // =====================================================
 // Keyboard Layout speichern/laden
@@ -138,7 +140,7 @@ void saveKeyboardLayoutToFlash() {
 
 int generatorLengthOptions[] = {12, 16, 20, 24, 32};
 const int generatorLengthOptionCount = 5;
-int selectedGeneratorLengthIndex = 1; // Standard: 16 Zeichen
+int selectedGeneratorLengthIndex = 1;  // Standard: 16 Zeichen
 char generatedPassword[65] = "";
 bool generatedPasswordReady = false;
 
@@ -156,19 +158,9 @@ int selectedVaultHomeItem = 0;
 // Send-Menü für Auto-Type per USB HID
 // =====================================================
 
-const char* sendMenuItems[] = {
-  "Username",
-  "Password",
-  "User+Tab+Pass",
-  "Details"
-};
+const char* sendMenuItems[] = {"Username", "Password", "User+Tab+Pass", "Details"};
 
-const char* sendMenuSubtitles[] = {
-  "Type username",
-  "Type password",
-  "Login form",
-  "View entry"
-};
+const char* sendMenuSubtitles[] = {"Type username", "Type password", "Login form", "View entry"};
 
 const int sendMenuCount = 4;
 int selectedSendMenuItem = 0;
@@ -198,13 +190,13 @@ int searchScrollOffset = 0;
 // =====================================================
 
 const int maxFavoriteCount = 10;
-int favoriteIndexes[maxFavoriteCount] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+int favoriteIndexes[maxFavoriteCount] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 int favoriteCount = 0;
 int selectedFavoriteItem = 0;
 int favoriteScrollOffset = 0;
 
 const int maxRecentCount = 5;
-int recentIndexes[maxRecentCount] = {-1,-1,-1,-1,-1};
+int recentIndexes[maxRecentCount] = {-1, -1, -1, -1, -1};
 int recentCount = 0;
 int selectedRecentItem = 0;
 int recentScrollOffset = 0;
@@ -332,6 +324,8 @@ void drawHeader(const char* title, const char* subtitle) {
 
 void lockDevice() {
   webPortalStop();
+  masterKeyClear();
+
   deviceUnlocked = false;
   passwordVisible = false;
 
@@ -427,6 +421,7 @@ void checkPin() {
   hashPin(enteredPin, enteredPinHash);
 
   if (strcmp(enteredPinHash, storedPinHash) == 0) {
+    masterKeyDeriveFromPin(enteredPin);
     deviceUnlocked = true;
 
     failedPinAttempts = 0;
@@ -454,12 +449,15 @@ void checkPin() {
 }
 
 void checkAutoLock() {
-  if (currentScreen == SCREEN_LOCK) return;
-  if (!deviceUnlocked) return;
+  if (currentScreen == SCREEN_LOCK)
+    return;
+  if (!deviceUnlocked)
+    return;
 
   // Während das Web Portal läuft, nicht automatisch sperren.
   // Sonst wird das WLAN mitten beim Bearbeiten getrennt.
-  if (webPortalIsActive()) return;
+  if (webPortalIsActive())
+    return;
 
   if (millis() - lastUserActivityTime >= AUTO_LOCK_MS) {
     lockDevice();
@@ -467,7 +465,8 @@ void checkAutoLock() {
 }
 
 void checkPinLockout() {
-  if (!pinLockoutActive) return;
+  if (!pinLockoutActive)
+    return;
 
   unsigned long now = millis();
 
@@ -526,7 +525,7 @@ void drawMenu() {
 
   updateMenuScrollOffset();
 
-  #if SECUREVAULT_DEV_MODE == 1
+#if SECUREVAULT_DEV_MODE == 1
   drawHeader("SecureVault", "DEV mode - HID off");
 #else
   drawHeader("SecureVault", "PRODUCT mode - HID on");
@@ -538,7 +537,8 @@ void drawMenu() {
   for (int row = 0; row < visibleMenuRows; row++) {
     int itemIndex = menuScrollOffset + row;
 
-    if (itemIndex >= menuCount) break;
+    if (itemIndex >= menuCount)
+      break;
 
     int y = startY + row * itemHeight;
     bool selected = (itemIndex == selectedMenuItem);
@@ -743,7 +743,6 @@ void saveNewPin() {
   currentScreen = SCREEN_DETAIL;
 }
 
-
 // =====================================================
 // Send-Menü-Zeile zeichnen
 // =====================================================
@@ -860,7 +859,6 @@ void performSendAction() {
   addToRecent(selectedVaultItem);
 }
 
-
 // =====================================================
 // Passwort-Generator zeichnen
 // =====================================================
@@ -961,7 +959,6 @@ void drawKeyboardLayoutScreen() {
   drawFooter("HOLD SEL", "BACK");
   currentScreen = SCREEN_DETAIL;
 }
-
 
 // =====================================================
 // TOTP Screen zeichnen
@@ -1094,10 +1091,7 @@ void syncTotpTime() {
   bool ok = false;
 
   if (wifiSettingsHasCredentials()) {
-    ok = totpSyncTimeWithWiFi(
-      wifiSettingsGetSsid(),
-      wifiSettingsGetPassword()
-    );
+    ok = totpSyncTimeWithWiFi(wifiSettingsGetSsid(), wifiSettingsGetPassword());
   }
 
   if (ok) {
@@ -1106,8 +1100,6 @@ void syncTotpTime() {
     drawTotpView(false, "Wi-Fi sync failed.");
   }
 }
-
-
 
 // =====================================================
 // Web Portal Screen
@@ -1419,7 +1411,8 @@ void drawVaultList() {
   for (int row = 0; row < visibleVaultRows; row++) {
     int itemIndex = vaultScrollOffset + row;
 
-    if (itemIndex >= vaultCount) break;
+    if (itemIndex >= vaultCount)
+      break;
 
     int y = startY + row * itemHeight;
     bool selected = (itemIndex == selectedVaultItem);
@@ -1443,15 +1436,18 @@ void drawVaultList() {
 
 bool isFavorite(int vaultIndex) {
   for (int i = 0; i < favoriteCount; i++) {
-    if (favoriteIndexes[i] == vaultIndex) return true;
+    if (favoriteIndexes[i] == vaultIndex)
+      return true;
   }
 
   return false;
 }
 
 void addToFavorites(int vaultIndex) {
-  if (isFavorite(vaultIndex)) return;
-  if (favoriteCount >= maxFavoriteCount) return;
+  if (isFavorite(vaultIndex))
+    return;
+  if (favoriteCount >= maxFavoriteCount)
+    return;
 
   favoriteIndexes[favoriteCount] = vaultIndex;
   favoriteCount++;
@@ -1472,7 +1468,8 @@ void removeFromFavorites(int vaultIndex) {
     }
   }
 
-  if (foundIndex == -1) return;
+  if (foundIndex == -1)
+    return;
 
   for (int i = foundIndex; i < favoriteCount - 1; i++) {
     favoriteIndexes[i] = favoriteIndexes[i + 1];
@@ -1481,7 +1478,8 @@ void removeFromFavorites(int vaultIndex) {
   favoriteIndexes[favoriteCount - 1] = -1;
   favoriteCount--;
 
-  if (favoriteCount < 0) favoriteCount = 0;
+  if (favoriteCount < 0)
+    favoriteCount = 0;
 
   selectedFavoriteItem = 0;
   favoriteScrollOffset = 0;
@@ -1629,7 +1627,8 @@ void drawFavoritesList() {
   for (int row = 0; row < visibleVaultRows; row++) {
     int favoriteListIndex = favoriteScrollOffset + row;
 
-    if (favoriteListIndex >= favoriteCount) break;
+    if (favoriteListIndex >= favoriteCount)
+      break;
 
     int vaultIndex = favoriteIndexes[favoriteListIndex];
 
@@ -1672,7 +1671,8 @@ void drawRecentList() {
   for (int row = 0; row < visibleVaultRows; row++) {
     int recentListIndex = recentScrollOffset + row;
 
-    if (recentListIndex >= recentCount) break;
+    if (recentListIndex >= recentCount)
+      break;
 
     int vaultIndex = recentIndexes[recentListIndex];
 
@@ -1775,7 +1775,8 @@ void drawSearchResults() {
   for (int row = 0; row < visibleVaultRows; row++) {
     int resultIndex = searchScrollOffset + row;
 
-    if (resultIndex >= searchResultCount) break;
+    if (resultIndex >= searchResultCount)
+      break;
 
     int vaultIndex = searchResults[resultIndex];
 
@@ -1800,7 +1801,8 @@ void drawSearchResults() {
 // =====================================================
 
 void goBack() {
-  if (currentScreen == SCREEN_MENU) return;
+  if (currentScreen == SCREEN_MENU)
+    return;
 
   if (currentScreen == SCREEN_SEND_MENU) {
     if (previousVaultListScreen == SCREEN_VAULT_LIST) {
@@ -1915,12 +1917,14 @@ void goBack() {
 // =====================================================
 
 void handleLockInput(ButtonEvent event) {
-  if (pinLockoutActive) return;
+  if (pinLockoutActive)
+    return;
 
   if (event == BUTTON_DOWN_SHORT) {
     currentPinDigit++;
 
-    if (currentPinDigit > 9) currentPinDigit = 0;
+    if (currentPinDigit > 9)
+      currentPinDigit = 0;
 
     drawLockScreen();
   }
@@ -2043,7 +2047,8 @@ void handleChangePinInput(ButtonEvent event) {
   if (event == BUTTON_DOWN_SHORT) {
     currentNewPinDigit++;
 
-    if (currentNewPinDigit > 9) currentNewPinDigit = 0;
+    if (currentNewPinDigit > 9)
+      currentNewPinDigit = 0;
 
     drawChangePinScreen();
   }
@@ -2079,7 +2084,6 @@ void handleChangePinInput(ButtonEvent event) {
   }
 }
 
-
 void handleSendMenuInput(ButtonEvent event) {
   if (event == BUTTON_DOWN_SHORT) {
     selectedSendMenuItem++;
@@ -2106,8 +2110,6 @@ void handleSendingInput(ButtonEvent event) {
   }
 }
 
-
-
 void handleTotpInput(ButtonEvent event) {
   // DOWN kurz: Zeit neu synchronisieren
   if (event == BUTTON_DOWN_SHORT) {
@@ -2129,8 +2131,6 @@ void handleTotpInput(ButtonEvent event) {
     goBack();
   }
 }
-
-
 
 void handleWebPortalInput(ButtonEvent event) {
   webPortalMarkActivity();
@@ -2204,7 +2204,8 @@ void handleVaultHomeInput(ButtonEvent event) {
   if (event == BUTTON_DOWN_SHORT) {
     selectedVaultHomeItem++;
 
-    if (selectedVaultHomeItem >= vaultHomeCount) selectedVaultHomeItem = 0;
+    if (selectedVaultHomeItem >= vaultHomeCount)
+      selectedVaultHomeItem = 0;
 
     drawVaultHome();
   }
@@ -2281,7 +2282,8 @@ void handleSearchLetterInput(ButtonEvent event) {
   if (event == BUTTON_DOWN_SHORT) {
     searchLetter++;
 
-    if (searchLetter > 'Z') searchLetter = 'A';
+    if (searchLetter > 'Z')
+      searchLetter = 'A';
 
     drawSearchLetterScreen();
   }
@@ -2298,7 +2300,8 @@ void handleSearchLetterInput(ButtonEvent event) {
 
 void handleSearchResultsInput(ButtonEvent event) {
   if (event == BUTTON_DOWN_SHORT) {
-    if (searchResultCount == 0) return;
+    if (searchResultCount == 0)
+      return;
 
     selectedSearchResult++;
 
@@ -2311,7 +2314,8 @@ void handleSearchResultsInput(ButtonEvent event) {
   }
 
   if (event == BUTTON_SELECT_SHORT) {
-    if (searchResultCount == 0) return;
+    if (searchResultCount == 0)
+      return;
 
     int vaultIndex = searchResults[selectedSearchResult];
 
@@ -2343,7 +2347,8 @@ void handleFavoritesListInput(ButtonEvent event) {
   }
 
   if (event == BUTTON_SELECT_SHORT) {
-    if (favoriteCount == 0) return;
+    if (favoriteCount == 0)
+      return;
 
     int vaultIndex = favoriteIndexes[selectedFavoriteItem];
 
@@ -2375,7 +2380,8 @@ void handleRecentListInput(ButtonEvent event) {
   }
 
   if (event == BUTTON_SELECT_SHORT) {
-    if (recentCount == 0) return;
+    if (recentCount == 0)
+      return;
 
     int vaultIndex = recentIndexes[selectedRecentItem];
 
@@ -2397,7 +2403,8 @@ void handleRecentListInput(ButtonEvent event) {
 void handleButtons() {
   ButtonEvent event = readButtonEvent();
 
-  if (event == BUTTON_NONE) return;
+  if (event == BUTTON_NONE)
+    return;
 
   markUserActivity();
 
@@ -2445,6 +2452,8 @@ void handleButtons() {
 // =====================================================
 
 void setup() {
+  masterKeyClear();
+
   setupDisplayPower();
   buttonsBegin();
   hidBegin();
@@ -2455,7 +2464,6 @@ void setup() {
   totpBegin();
 
   loadPinHashFromFlash(storedPinHash);
-
 
   // Vault-Einträge aus Flash laden
   vaultLoadFromFlash();
@@ -2489,7 +2497,6 @@ void checkWebPortalTimeout() {
     }
   }
 }
-
 
 void loop() {
   webPortalProcess();
