@@ -33,6 +33,14 @@ static unsigned long lastPortalActivityTime = 0;
 static bool portalAuthenticated = false;
 static char portalPinHash[65] = "";
 
+// Schutz gegen PIN-Bruteforce im Web Portal
+static int portalFailedPinAttempts = 0;
+static bool portalLoginLocked = false;
+static unsigned long portalLoginLockedAt = 0;
+
+static const int PORTAL_MAX_PIN_ATTEMPTS = 3;
+static const unsigned long PORTAL_LOCKOUT_MS = 30000;
+
 static const char* PORTAL_SSID = "SecureVault-Setup";
 
 // =====================================================
@@ -65,6 +73,40 @@ void webPortalLogout() {
   portalAuthenticated = false;
 }
 
+// =====================================================
+// Web Portal PIN Lockout
+// =====================================================
+
+static bool isPortalLockoutActive() {
+  if (!portalLoginLocked) {
+    return false;
+  }
+
+  unsigned long now = millis();
+
+  if (now - portalLoginLockedAt >= PORTAL_LOCKOUT_MS) {
+    portalLoginLocked = false;
+    portalFailedPinAttempts = 0;
+    return false;
+  }
+
+  return true;
+}
+
+static int getPortalLockoutSecondsRemaining() {
+  if (!portalLoginLocked) {
+    return 0;
+  }
+
+  unsigned long elapsed = millis() - portalLoginLockedAt;
+
+  if (elapsed >= PORTAL_LOCKOUT_MS) {
+    return 0;
+  }
+
+  return (PORTAL_LOCKOUT_MS - elapsed) / 1000;
+}
+
 static bool webPortalCheckPin(const String& pin) {
   if (pin.length() != 4) {
     return false;
@@ -82,16 +124,26 @@ static bool webPortalCheckPin(const String& pin) {
 
 static void sendLoginPage(const char* message = "") {
   String html = "";
-  html += "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>";
+  html +=
+      "<!doctype html><html><head><meta name='viewport' "
+      "content='width=device-width,initial-scale=1'>";
   html += "<title>SecureVault Login</title>";
   html += "<style>";
-  html += "body{margin:0;background:#0b0b0b;color:#f5f5f5;font-family:Arial,sans-serif;padding:22px;}";
+  html +=
+      "body{margin:0;background:#0b0b0b;color:#f5f5f5;font-family:Arial,sans-serif;padding:22px;}";
   html += ".wrap{max-width:420px;margin:0 auto;}";
-  html += ".card{background:#161616;border:1px solid #2a2a2a;border-radius:18px;padding:22px;margin-top:30px;}";
+  html +=
+      ".card{background:#161616;border:1px solid "
+      "#2a2a2a;border-radius:18px;padding:22px;margin-top:30px;}";
   html += "h1{text-align:center;font-size:26px;margin:0 0 18px;}";
   html += "label{display:block;margin:12px 0 6px;color:#d0d0d0;font-weight:700;}";
-  html += "input{width:100%;box-sizing:border-box;padding:14px;border-radius:12px;border:1px solid #333;background:#0e0e0e;color:#fff;font-size:20px;text-align:center;letter-spacing:8px;}";
-  html += ".btn{width:100%;border:0;border-radius:12px;padding:13px 14px;background:#2979ff;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;margin-top:16px;font-size:16px;}";
+  html +=
+      "input{width:100%;box-sizing:border-box;padding:14px;border-radius:12px;border:1px solid "
+      "#333;background:#0e0e0e;color:#fff;font-size:20px;text-align:center;letter-spacing:8px;}";
+  html +=
+      ".btn{width:100%;border:0;border-radius:12px;padding:13px "
+      "14px;background:#2979ff;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;"
+      "margin-top:16px;font-size:16px;}";
   html += ".muted{color:#aaa;font-size:14px;line-height:1.4;}";
   html += ".error{color:#ff6b6b;font-weight:700;}";
   html += "</style></head><body><div class='wrap'>";
@@ -103,6 +155,12 @@ static void sendLoginPage(const char* message = "") {
     html += "<p class='error'>";
     html += message;
     html += "</p>";
+  }
+
+  if (portalLoginLocked) {
+    html += "<p class='error'>Too many wrong tries. Wait ";
+    html += String(getPortalLockoutSecondsRemaining());
+    html += " seconds.</p>";
   }
 
   html += "<form method='POST' action='/login_submit'>";
@@ -134,18 +192,42 @@ static void handleLogin() {
 static void handleLoginSubmit() {
   webPortalMarkActivity();
 
+  if (isPortalLockoutActive()) {
+    sendLoginPage("Web portal is temporarily locked.");
+    return;
+  }
+
   String pin = server.arg("pin");
   pin.trim();
 
   if (webPortalCheckPin(pin)) {
     portalAuthenticated = true;
+    portalFailedPinAttempts = 0;
+    portalLoginLocked = false;
+
     server.sendHeader("Location", "/");
     server.send(303);
     return;
   }
 
   portalAuthenticated = false;
-  sendLoginPage("Wrong PIN.");
+  portalFailedPinAttempts++;
+
+  if (portalFailedPinAttempts >= PORTAL_MAX_PIN_ATTEMPTS) {
+    portalLoginLocked = true;
+    portalLoginLockedAt = millis();
+
+    sendLoginPage("Too many wrong PIN attempts.");
+    return;
+  }
+
+  String message = "Wrong PIN. Tries ";
+  message += String(portalFailedPinAttempts);
+  message += "/";
+  message += String(PORTAL_MAX_PIN_ATTEMPTS);
+  message += ".";
+
+  sendLoginPage(message.c_str());
 }
 
 static void handleLogout() {
@@ -173,21 +255,32 @@ static String urlBack() {
 
 static String pageHeader(const String& title) {
   String html = "";
-  html += "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>";
+  html +=
+      "<!doctype html><html><head><meta name='viewport' "
+      "content='width=device-width,initial-scale=1'>";
   html += "<title>SecureVault</title>";
   html += "<style>";
-  html += "body{margin:0;background:#0b0b0b;color:#f5f5f5;font-family:Arial,sans-serif;padding:18px;}";
+  html +=
+      "body{margin:0;background:#0b0b0b;color:#f5f5f5;font-family:Arial,sans-serif;padding:18px;}";
   html += ".wrap{max-width:980px;margin:0 auto;}";
   html += "h1{font-size:28px;margin:0 0 18px;text-align:center;}";
   html += "h2{font-size:20px;margin:0 0 14px;}";
-  html += ".card{background:#161616;border:1px solid #2a2a2a;border-radius:18px;padding:18px;margin-bottom:16px;}";
+  html +=
+      ".card{background:#161616;border:1px solid "
+      "#2a2a2a;border-radius:18px;padding:18px;margin-bottom:16px;}";
   html += "label{display:block;margin:12px 0 6px;color:#d0d0d0;font-weight:700;}";
-  html += "input,select{width:100%;box-sizing:border-box;padding:13px;border-radius:12px;border:1px solid #333;background:#0e0e0e;color:#fff;font-size:16px;}";
+  html +=
+      "input,select{width:100%;box-sizing:border-box;padding:13px;border-radius:12px;border:1px "
+      "solid #333;background:#0e0e0e;color:#fff;font-size:16px;}";
   html += "table{width:100%;border-collapse:collapse;}";
-  html += "th,td{border-bottom:1px solid #2a2a2a;padding:12px 8px;text-align:left;vertical-align:middle;}";
+  html +=
+      "th,td{border-bottom:1px solid #2a2a2a;padding:12px "
+      "8px;text-align:left;vertical-align:middle;}";
   html += "th{color:#aaa;font-size:13px;text-transform:uppercase;}";
   html += ".actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}";
-  html += ".btn{display:inline-block;border:0;border-radius:12px;padding:11px 14px;background:#2979ff;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;}";
+  html +=
+      ".btn{display:inline-block;border:0;border-radius:12px;padding:11px "
+      "14px;background:#2979ff;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;}";
   html += ".danger{background:#d32f2f;}";
   html += ".secondary{background:#444;}";
   html += ".muted{color:#aaa;font-size:14px;}";
@@ -248,7 +341,8 @@ static String loadOrCreatePortalPassword() {
 
 static void handleRoot() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   String html = pageHeader("SecureVault Web Portal");
 
@@ -358,14 +452,16 @@ static void handleAddEditForm(bool editMode) {
 
 static void handleAdd() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   handleAddEditForm(false);
 }
 
 static void handleEdit() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   handleAddEditForm(true);
 }
@@ -376,7 +472,8 @@ static void handleEdit() {
 
 static void handleSaveAdd() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   String title = server.arg("title");
   String username = server.arg("username");
@@ -422,7 +519,8 @@ static void handleSaveAdd() {
 
 static void handleSaveEdit() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -445,7 +543,8 @@ static void handleSaveEdit() {
     category = "General";
   }
 
-  bool ok = vaultUpdateEntry(index, title.c_str(), username.c_str(), password.c_str(), category.c_str());
+  bool ok =
+      vaultUpdateEntry(index, title.c_str(), username.c_str(), password.c_str(), category.c_str());
 
   if (!ok) {
     String html = pageHeader("Error");
@@ -466,7 +565,8 @@ static void handleSaveEdit() {
 
 static void handleDelete() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -493,7 +593,8 @@ static void handleDelete() {
 
 static void handleDeleteConfirm() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -513,7 +614,8 @@ static void handleDeleteConfirm() {
 
 static void handleWifiSettings() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   String html = pageHeader("Wi-Fi Settings");
 
@@ -563,7 +665,8 @@ static void handleWifiSettings() {
 
 static void handleWifiSave() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   String ssid = server.arg("ssid");
   String password = server.arg("password");
@@ -602,7 +705,8 @@ static void handleWifiSave() {
 
 static void handleTotpSettings() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   String html = pageHeader("TOTP Settings");
 
@@ -658,7 +762,8 @@ static void handleTotpSettings() {
 
 static void handleTotpSave() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   String label = server.arg("label");
   String secret = server.arg("secret");
@@ -711,7 +816,8 @@ static void handleTotpSave() {
 
 static void handleTotpClear() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   totpSettingsClear();
   totpBegin();
@@ -732,7 +838,8 @@ static void handleTotpClear() {
 
 static void handleInfo() {
   webPortalMarkActivity();
-  if (!requirePortalLogin()) return;
+  if (!requirePortalLogin())
+    return;
 
   String html = pageHeader("Info");
 
@@ -758,12 +865,16 @@ static void handleInfo() {
   html += "<button class='btn' onclick='copyPass()' type='button'>Copy Password</button>";
   html += "</div>";
 
-  html += "<p class='muted'>If your phone or PC already remembered an old password, use Forget Network once.</p>";
+  html +=
+      "<p class='muted'>If your phone or PC already remembered an old password, use Forget Network "
+      "once.</p>";
   html += "</div>";
 
   html += "<div class='card'>";
   html += "<h2>Security Status</h2>";
-  html += "<p class='muted'>Important: vault storage is not encrypted yet. The next big step is encrypted storage.</p>";
+  html +=
+      "<p class='muted'>Important: vault storage is not encrypted yet. The next big step is "
+      "encrypted storage.</p>";
   html += "</div>";
 
   html += "<script>";
@@ -791,6 +902,9 @@ bool webPortalStart() {
 
   portalPassword = loadOrCreatePortalPassword();
   portalAuthenticated = false;
+  portalFailedPinAttempts = 0;
+  portalLoginLocked = false;
+  portalLoginLockedAt = 0;
 
   WiFi.disconnect(true, true);
   WiFi.softAPdisconnect(true);
@@ -854,6 +968,9 @@ void webPortalStop() {
 
   portalActive = false;
   portalAuthenticated = false;
+  portalFailedPinAttempts = 0;
+  portalLoginLocked = false;
+  portalLoginLockedAt = 0;
 }
 
 void webPortalProcess() {
