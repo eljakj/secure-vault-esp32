@@ -2028,10 +2028,18 @@ void handleSettingsHomeInput(ButtonEvent event) {
       tft.setTextSize(1);
       tft.setCursor(10, 110);
       tft.println("SecureVault v0.1");
-      tft.println("Empty vault build");
+      tft.println("Master key build");
       tft.println("LILYGO T-Display-S3");
+
       tft.print("Keyboard: ");
       tft.println(hidGetKeyboardLayoutName());
+
+      tft.print("Key ready: ");
+      if (masterKeyIsReady()) {
+        tft.println("YES");
+      } else {
+        tft.println("NO");
+      }
 
       drawFooter("HOLD SEL", "BACK");
       currentScreen = SCREEN_DETAIL;
