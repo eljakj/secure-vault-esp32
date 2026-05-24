@@ -446,12 +446,14 @@ void checkPin() {
       if (loadedEncryptedVault) {
         vaultClearPlaintextFlash();
       } else {
-        // DEV-Fix:
-        // Wenn PIN/Key geändert wurde, kann die alte /vault.enc nicht mehr entschlüsselt werden.
-        // Dann löschen wir die alte Datei und erstellen einen neuen leeren Vault mit aktuellem
-        // PIN-Key.
         Serial.println("Encrypted vault could not be decrypted.");
-        Serial.println("Removing old encrypted vault and creating a new empty vault.");
+
+#if SECUREVAULT_DEV_MODE
+        // DEV-Modus:
+        // Nur fuer Entwicklung/Test erlaubt.
+        // Wenn PIN/Key geaendert wurde, kann die alte /vault.enc nicht mehr entschluesselt werden.
+        // Dann loeschen wir die alte Test-Datei und erstellen einen neuen leeren Vault.
+        Serial.println("DEV MODE: removing old encrypted vault and creating a new empty vault.");
 
         vaultSecureStorageRemove();
         vaultRestoreDefaultEntries();
@@ -460,6 +462,13 @@ void checkPin() {
 
         Serial.print("Create new encrypted vault: ");
         Serial.println(savedEncryptedVault ? "OK" : "FAILED");
+#else
+        // Produktmodus:
+        // Niemals automatisch loeschen.
+        // User muss bewusst Factory Reset / Recovery machen.
+        Serial.println("PRODUCT MODE: vault kept. Manual recovery required.");
+        vaultRestoreDefaultEntries();
+#endif
       }
     } else {
       vaultRestoreDefaultEntries();
@@ -469,7 +478,6 @@ void checkPin() {
       Serial.print("Create encrypted vault: ");
       Serial.println(savedEncryptedVault ? "OK" : "FAILED");
     }
-
     deviceUnlocked = true;
 
     failedPinAttempts = 0;
