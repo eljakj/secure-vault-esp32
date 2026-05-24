@@ -631,9 +631,19 @@ static void handleWifiSettings() {
   html += "' placeholder='Your Wi-Fi name'>";
 
   html += "<label>Wi-Fi Password</label>";
-  html += "<input name='password' maxlength='95' type='password' value='";
-  html += htmlEscape(wifiSettingsGetPassword());
-  html += "' placeholder='Your Wi-Fi password'>";
+
+  if (wifiSettingsHasCredentials()) {
+    html +=
+        "<input name='password' maxlength='95' type='password' value='' placeholder='Leave empty "
+        "to keep current password'>";
+    html +=
+        "<p class='muted'>A Wi-Fi password is already saved. Leave this field empty to keep "
+        "it.</p>";
+  } else {
+    html +=
+        "<input name='password' maxlength='95' type='password' value='' placeholder='Your Wi-Fi "
+        "password'>";
+  }
 
   html += "<div class='actions'>";
   html += "<button class='btn' type='submit'>Save Wi-Fi</button>";
@@ -674,10 +684,10 @@ static void handleWifiSave() {
   ssid.trim();
   password.trim();
 
-  if (ssid.length() == 0 || password.length() == 0) {
+  if (ssid.length() == 0) {
     String html = pageHeader("Wi-Fi Error");
     html += "<div class='card'>";
-    html += "<h2>SSID and password are required.</h2>";
+    html += "<h2>SSID is required.</h2>";
     html += urlBack();
     html += "</div>";
     html += pageFooter();
@@ -686,7 +696,25 @@ static void handleWifiSave() {
     return;
   }
 
-  wifiSettingsSave(ssid.c_str(), password.c_str());
+  if (password.length() == 0 && !wifiSettingsHasCredentials()) {
+    String html = pageHeader("Wi-Fi Error");
+    html += "<div class='card'>";
+    html += "<h2>Wi-Fi password is required.</h2>";
+    html += urlBack();
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
+  }
+
+  if (password.length() == 0 && wifiSettingsHasCredentials()) {
+    // Passwort leer lassen bedeutet:
+    // gespeichertes Passwort behalten, nur SSID aktualisieren.
+    wifiSettingsSave(ssid.c_str(), wifiSettingsGetPassword());
+  } else {
+    wifiSettingsSave(ssid.c_str(), password.c_str());
+  }
 
   String html = pageHeader("Wi-Fi Saved");
   html += "<div class='card'>";
@@ -722,11 +750,19 @@ static void handleTotpSettings() {
   html += "' placeholder='Example: Gmail'>";
 
   html += "<label>Base32 Secret</label>";
-  html += "<input name='secret' maxlength='127' value='";
-  html += htmlEscape(totpSettingsGetBase32Secret());
-  html += "' placeholder='ABCD EFGH IJKL MNOP'>";
 
-  html += "<p class='muted'>Use the Base32 secret from your 2FA setup. Spaces are okay.</p>";
+  if (totpSettingsHasSecret()) {
+    html +=
+        "<input name='secret' maxlength='127' type='password' value='' placeholder='Leave empty to "
+        "keep current secret'>";
+    html +=
+        "<p class='muted'>A TOTP secret is already saved. Leave this field empty to keep it.</p>";
+  } else {
+    html +=
+        "<input name='secret' maxlength='127' type='password' value='' placeholder='ABCD EFGH IJKL "
+        "MNOP'>";
+    html += "<p class='muted'>Enter the Base32 secret from your 2FA setup. Spaces are okay.</p>";
+  }
 
   html += "<div class='actions'>";
   html += "<button class='btn' type='submit'>Save TOTP</button>";
@@ -775,7 +811,7 @@ static void handleTotpSave() {
     label = "TOTP";
   }
 
-  if (secret.length() == 0) {
+  if (secret.length() == 0 && !totpSettingsHasSecret()) {
     String html = pageHeader("TOTP Error");
     html += "<div class='card'>";
     html += "<h2>Base32 secret is required.</h2>";
@@ -787,7 +823,13 @@ static void handleTotpSave() {
     return;
   }
 
-  totpSettingsSave(label.c_str(), secret.c_str());
+  if (secret.length() == 0 && totpSettingsHasSecret()) {
+    // Secret leer lassen bedeutet:
+    // gespeichertes Secret behalten, nur Label aktualisieren.
+    totpSettingsSave(label.c_str(), totpSettingsGetBase32Secret());
+  } else {
+    totpSettingsSave(label.c_str(), secret.c_str());
+  }
 
   // Secret neu in den TOTP Manager laden
   bool ok = totpBegin();
