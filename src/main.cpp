@@ -13,6 +13,7 @@
 #include "password_generator.h"
 #include "wifi_settings.h"
 #include "master_key.h"
+#include "vault_file.h"
 
 // =====================================================
 // Globale Objekte
@@ -2461,6 +2462,18 @@ void handleButtons() {
 
 void setup() {
   masterKeyClear();
+
+  Serial.begin(115200);
+  delay(300);
+
+  bool fsOk = vaultFileBegin();
+  
+  if (fsOk) {
+    Serial.println("LittleFS started");
+    vaultFileDebugPrintInfo();
+  } else {
+    Serial.println("LittleFS failed");
+  }
 
   setupDisplayPower();
   buttonsBegin();
