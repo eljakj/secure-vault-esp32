@@ -15,3 +15,5 @@ const char* totpSettingsGetLabel();
 const char* totpSettingsGetBase32Secret();
 
 bool totpSettingsHasSecret();
+
+void totpSettingsClearRam();

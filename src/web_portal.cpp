@@ -341,8 +341,10 @@ static String loadOrCreatePortalPassword() {
 
 static void handleRoot() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   String html = pageHeader("SecureVault Web Portal");
 
@@ -452,16 +454,20 @@ static void handleAddEditForm(bool editMode) {
 
 static void handleAdd() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   handleAddEditForm(false);
 }
 
 static void handleEdit() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   handleAddEditForm(true);
 }
@@ -472,8 +478,10 @@ static void handleEdit() {
 
 static void handleSaveAdd() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   String title = server.arg("title");
   String username = server.arg("username");
@@ -519,8 +527,10 @@ static void handleSaveAdd() {
 
 static void handleSaveEdit() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -565,8 +575,10 @@ static void handleSaveEdit() {
 
 static void handleDelete() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -593,8 +605,10 @@ static void handleDelete() {
 
 static void handleDeleteConfirm() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   if (!server.hasArg("i")) {
     server.send(400, "text/plain", "Missing index");
@@ -614,8 +628,10 @@ static void handleDeleteConfirm() {
 
 static void handleWifiSettings() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   String html = pageHeader("Wi-Fi Settings");
 
@@ -675,8 +691,10 @@ static void handleWifiSettings() {
 
 static void handleWifiSave() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   String ssid = server.arg("ssid");
   String password = server.arg("password");
@@ -709,8 +727,6 @@ static void handleWifiSave() {
   }
 
   if (password.length() == 0 && wifiSettingsHasCredentials()) {
-    // Passwort leer lassen bedeutet:
-    // gespeichertes Passwort behalten, nur SSID aktualisieren.
     wifiSettingsSave(ssid.c_str(), wifiSettingsGetPassword());
   } else {
     wifiSettingsSave(ssid.c_str(), password.c_str());
@@ -733,8 +749,10 @@ static void handleWifiSave() {
 
 static void handleTotpSettings() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   String html = pageHeader("TOTP Settings");
 
@@ -798,8 +816,10 @@ static void handleTotpSettings() {
 
 static void handleTotpSave() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   String label = server.arg("label");
   String secret = server.arg("secret");
@@ -824,14 +844,11 @@ static void handleTotpSave() {
   }
 
   if (secret.length() == 0 && totpSettingsHasSecret()) {
-    // Secret leer lassen bedeutet:
-    // gespeichertes Secret behalten, nur Label aktualisieren.
     totpSettingsSave(label.c_str(), totpSettingsGetBase32Secret());
   } else {
     totpSettingsSave(label.c_str(), secret.c_str());
   }
 
-  // Secret neu in den TOTP Manager laden
   bool ok = totpBegin();
 
   String html = pageHeader("TOTP Saved");
@@ -858,8 +875,10 @@ static void handleTotpSave() {
 
 static void handleTotpClear() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   totpSettingsClear();
   totpBegin();
@@ -880,8 +899,10 @@ static void handleTotpClear() {
 
 static void handleInfo() {
   webPortalMarkActivity();
-  if (!requirePortalLogin())
+
+  if (!requirePortalLogin()) {
     return;
+  }
 
   String html = pageHeader("Info");
 
@@ -907,9 +928,10 @@ static void handleInfo() {
 
   html += "<div class='card'>";
   html += "<h2>Security Status</h2>";
+  html += "<p class='muted'>Vault entries are stored encrypted in /vault.enc.</p>";
   html +=
-      "<p class='muted'>Important: vault storage is not encrypted yet. The next big step is "
-      "encrypted storage.</p>";
+      "<p class='muted'>Wi-Fi and TOTP settings are currently stored separately and will be "
+      "hardened later.</p>";
   html += "</div>";
 
   html += pageFooter();
@@ -919,12 +941,29 @@ static void handleInfo() {
 
 // =====================================================
 // Browser-Nebenanfragen ignorieren
-// Beispiel: favicon.ico, robots.txt
+// Beispiele: favicon, manifests, browser icons
 // =====================================================
 
 static void handleEmptyResponse() {
   webPortalMarkActivity();
   server.send(204, "text/plain", "");
+}
+
+static void handleNotFoundQuietly() {
+  webPortalMarkActivity();
+
+  String uri = server.uri();
+
+  if (uri == "/favicon.ico" || uri == "/robots.txt" || uri == "/manifest.json" ||
+      uri == "/site.webmanifest" || uri == "/browserconfig.xml" || uri == "/apple-touch-icon.png" ||
+      uri == "/apple-touch-icon-precomposed.png" || uri == "/apple-touch-icon-120x120.png" ||
+      uri == "/apple-touch-icon-152x152.png" || uri == "/apple-touch-icon-180x180.png" ||
+      uri == "/android-chrome-192x192.png" || uri == "/android-chrome-512x512.png") {
+    server.send(204, "text/plain", "");
+    return;
+  }
+
+  server.send(404, "text/plain", "Not found");
 }
 
 // =====================================================
@@ -965,9 +1004,17 @@ bool webPortalStart() {
   server.on("/logout", HTTP_GET, handleLogout);
 
   server.on("/favicon.ico", HTTP_GET, handleEmptyResponse);
+  server.on("/robots.txt", HTTP_GET, handleEmptyResponse);
+  server.on("/manifest.json", HTTP_GET, handleEmptyResponse);
+  server.on("/site.webmanifest", HTTP_GET, handleEmptyResponse);
+  server.on("/browserconfig.xml", HTTP_GET, handleEmptyResponse);
   server.on("/apple-touch-icon.png", HTTP_GET, handleEmptyResponse);
   server.on("/apple-touch-icon-precomposed.png", HTTP_GET, handleEmptyResponse);
-  server.on("/robots.txt", HTTP_GET, handleEmptyResponse);
+  server.on("/apple-touch-icon-120x120.png", HTTP_GET, handleEmptyResponse);
+  server.on("/apple-touch-icon-152x152.png", HTTP_GET, handleEmptyResponse);
+  server.on("/apple-touch-icon-180x180.png", HTTP_GET, handleEmptyResponse);
+  server.on("/android-chrome-192x192.png", HTTP_GET, handleEmptyResponse);
+  server.on("/android-chrome-512x512.png", HTTP_GET, handleEmptyResponse);
 
   server.on("/", HTTP_GET, handleRoot);
   server.on("/add", HTTP_GET, handleAdd);
@@ -983,12 +1030,11 @@ bool webPortalStart() {
   server.on("/delete_confirm", HTTP_GET, handleDeleteConfirm);
   server.on("/info", HTTP_GET, handleInfo);
 
-  // Captive portal helpers
   server.on("/generate_204", HTTP_GET, handleRoot);
   server.on("/hotspot-detect.html", HTTP_GET, handleRoot);
   server.on("/ncsi.txt", HTTP_GET, handleRoot);
 
-  server.onNotFound(handleRoot);
+  server.onNotFound(handleNotFoundQuietly);
   server.begin();
 
   portalActive = true;

@@ -14,3 +14,5 @@ const char* wifiSettingsGetSsid();
 const char* wifiSettingsGetPassword();
 
 bool wifiSettingsHasCredentials();
+
+void wifiSettingsClearRam();

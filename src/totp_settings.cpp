@@ -91,3 +91,14 @@ const char* totpSettingsGetBase32Secret() {
 bool totpSettingsHasSecret() {
   return strlen(savedTotpBase32Secret) > 0;
 }
+
+// =====================================================
+// TOTP Daten nur aus RAM löschen
+// Flash bleibt erhalten.
+// Wichtig beim Lock.
+// =====================================================
+
+void totpSettingsClearRam() {
+  memset(savedTotpLabel, 0, sizeof(savedTotpLabel));
+  memset(savedTotpBase32Secret, 0, sizeof(savedTotpBase32Secret));
+}

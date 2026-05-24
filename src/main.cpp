@@ -328,7 +328,12 @@ void drawHeader(const char* title, const char* subtitle) {
 
 void lockDevice() {
   webPortalStop();
+
   vaultClearRam();
+  wifiSettingsClearRam();
+  totpSettingsClearRam();
+  totpBegin();
+
   masterKeyClear();
 
   deviceUnlocked = false;
@@ -427,6 +432,10 @@ void checkPin() {
 
   if (strcmp(enteredPinHash, storedPinHash) == 0) {
     masterKeyDeriveFromPin(enteredPin);
+
+    wifiSettingsLoad();
+    totpSettingsLoad();
+    totpBegin();
 
     if (vaultSecureStorageExists()) {
       bool loadedEncryptedVault = vaultSecureStorageLoad();
@@ -2502,8 +2511,9 @@ void setup() {
   hidBegin();
   loadKeyboardLayoutFromFlash();
 
-  wifiSettingsLoad();
-  totpSettingsLoad();
+  // Wi-Fi/TOTP Secrets werden erst nach PIN-Unlock in RAM geladen.
+  wifiSettingsClearRam();
+  totpSettingsClearRam();
   totpBegin();
 
   loadPinHashFromFlash(storedPinHash);

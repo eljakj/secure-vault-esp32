@@ -87,3 +87,14 @@ const char* wifiSettingsGetPassword() {
 bool wifiSettingsHasCredentials() {
   return strlen(savedWifiSsid) > 0 && strlen(savedWifiPassword) > 0;
 }
+
+// =====================================================
+// Wi-Fi Daten nur aus RAM löschen
+// Flash bleibt erhalten.
+// Wichtig beim Lock.
+// =====================================================
+
+void wifiSettingsClearRam() {
+  memset(savedWifiSsid, 0, sizeof(savedWifiSsid));
+  memset(savedWifiPassword, 0, sizeof(savedWifiPassword));
+}
