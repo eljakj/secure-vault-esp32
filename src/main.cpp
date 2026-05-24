@@ -418,8 +418,6 @@ void drawLockScreen(const char* message) {
   drawFooter("DOWN +", "SELECT OK");
 }
 
-
-
 void checkPin() {
   enteredPin[4] = '\0';
 
@@ -428,8 +426,6 @@ void checkPin() {
 
   if (strcmp(enteredPinHash, storedPinHash) == 0) {
     masterKeyDeriveFromPin(enteredPin);
-
-    vaultSecureStorageDebugPrint();
 
     if (vaultSecureStorageExists()) {
       bool loadedEncryptedVault = vaultSecureStorageLoad();
@@ -450,8 +446,6 @@ void checkPin() {
       Serial.print("Create encrypted vault: ");
       Serial.println(savedEncryptedVault ? "OK" : "FAILED");
     }
-
-    vaultSerializerDebugPrint();
 
     deviceUnlocked = true;
 
@@ -2498,10 +2492,7 @@ void setup() {
 
   bool fsOk = vaultFileBegin();
 
-  if (fsOk) {
-    Serial.println("LittleFS started");
-    vaultFileDebugPrintInfo();
-  } else {
+  if (!fsOk) {
     Serial.println("LittleFS failed");
   }
 

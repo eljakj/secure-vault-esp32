@@ -1,14 +1,26 @@
 #include "storage.h"
+
 #include "wifi_settings.h"
 #include "totp_settings.h"
 #include "vault_secure_storage.h"
 
 // =====================================================
 // PIN-Hash aus Flash laden
+// Wenn noch kein PIN gespeichert ist:
+// - Default-PIN 1234 benutzen
+// - Default-Hash direkt speichern
+// So vermeiden wir nervige NOT_FOUND Meldungen beim Boot.
 // =====================================================
 
 void loadPinHashFromFlash(char* storedPinHash) {
-  preferences.begin("security", true);
+  preferences.begin("security", false);
+
+  if (!preferences.isKey("pinHash")) {
+    preferences.putString("pinHash", DEFAULT_PIN_HASH);
+    strncpy(storedPinHash, DEFAULT_PIN_HASH, 65);
+    preferences.end();
+    return;
+  }
 
   String savedHash = preferences.getString("pinHash", "");
 
@@ -41,9 +53,14 @@ void savePinHashToFlash(const char* pinHash, char* storedPinHash) {
 // =====================================================
 
 void loadRecentFromFlash(int* recentIndexes, int maxRecentCount, int& recentCount) {
-  preferences.begin("vault", true);
+  preferences.begin("vault", false);
 
-  recentCount = preferences.getInt("recentCount", 0);
+  if (preferences.isKey("recentCount")) {
+    recentCount = preferences.getInt("recentCount", 0);
+  } else {
+    recentCount = 0;
+    preferences.putInt("recentCount", 0);
+  }
 
   if (recentCount < 0 || recentCount > maxRecentCount) {
     recentCount = 0;
@@ -51,7 +68,13 @@ void loadRecentFromFlash(int* recentIndexes, int maxRecentCount, int& recentCoun
 
   for (int i = 0; i < maxRecentCount; i++) {
     String key = "recent" + String(i);
-    recentIndexes[i] = preferences.getInt(key.c_str(), -1);
+
+    if (preferences.isKey(key.c_str())) {
+      recentIndexes[i] = preferences.getInt(key.c_str(), -1);
+    } else {
+      recentIndexes[i] = -1;
+      preferences.putInt(key.c_str(), -1);
+    }
   }
 
   preferences.end();
@@ -79,9 +102,14 @@ void saveRecentToFlash(const int* recentIndexes, int maxRecentCount, int recentC
 // =====================================================
 
 void loadFavoritesFromFlash(int* favoriteIndexes, int maxFavoriteCount, int& favoriteCount) {
-  preferences.begin("vault", true);
+  preferences.begin("vault", false);
 
-  favoriteCount = preferences.getInt("favoriteCount", 0);
+  if (preferences.isKey("favoriteCount")) {
+    favoriteCount = preferences.getInt("favoriteCount", 0);
+  } else {
+    favoriteCount = 0;
+    preferences.putInt("favoriteCount", 0);
+  }
 
   if (favoriteCount < 0 || favoriteCount > maxFavoriteCount) {
     favoriteCount = 0;
@@ -89,7 +117,13 @@ void loadFavoritesFromFlash(int* favoriteIndexes, int maxFavoriteCount, int& fav
 
   for (int i = 0; i < maxFavoriteCount; i++) {
     String key = "favorite" + String(i);
-    favoriteIndexes[i] = preferences.getInt(key.c_str(), -1);
+
+    if (preferences.isKey(key.c_str())) {
+      favoriteIndexes[i] = preferences.getInt(key.c_str(), -1);
+    } else {
+      favoriteIndexes[i] = -1;
+      preferences.putInt(key.c_str(), -1);
+    }
   }
 
   preferences.end();
