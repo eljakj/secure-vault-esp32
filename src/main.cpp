@@ -782,17 +782,51 @@ void saveNewPin() {
   char newPinHash[65];
   hashPin(newPin, newPinHash);
 
+  // =====================================================
+  // Wichtig:
+  // Der Vault ist aktuell bereits mit dem alten PIN-Key
+  // entschlüsselt im RAM.
+  //
+  // Reihenfolge:
+  // 1. PIN-Hash speichern
+  // 2. Master-Key auf neuen PIN wechseln
+  // 3. Vault mit neuem Key neu verschlüsselt speichern
+  // =====================================================
+
   savePinHashToFlash(newPinHash, storedPinHash);
+  masterKeyReplaceWithPin(newPin);
+
+  bool reEncrypted = vaultSecureStorageSave();
 
   resetChangePinFlow();
 
-  drawHeader("PIN Saved", "Security updated");
+  if (reEncrypted) {
+    drawHeader("PIN Saved", "Vault re-encrypted");
 
-  tft.setTextColor(COLOR_TEXT, COLOR_BG);
-  tft.setTextSize(1);
-  tft.setCursor(10, 110);
-  tft.println("Your new PIN");
-  tft.println("has been saved.");
+    tft.setTextColor(COLOR_TEXT, COLOR_BG);
+    tft.setTextSize(1);
+    tft.setCursor(10, 110);
+    tft.println("Your new PIN");
+    tft.println("has been saved.");
+    tft.println("");
+    tft.println("Vault encrypted");
+    tft.println("with new PIN.");
+
+    Serial.println("PIN changed and vault re-encrypted: OK");
+  } else {
+    drawHeader("PIN Error", "Vault not saved");
+
+    tft.setTextColor(TFT_RED, COLOR_BG);
+    tft.setTextSize(1);
+    tft.setCursor(10, 110);
+    tft.println("PIN was changed,");
+    tft.println("but vault save");
+    tft.println("failed.");
+    tft.println("");
+    tft.println("Do not power off.");
+
+    Serial.println("PIN changed but vault re-encryption FAILED");
+  }
 
   drawFooter("HOLD SEL", "BACK");
 
