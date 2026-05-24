@@ -113,3 +113,14 @@ void totpSettingsSetRam(const char* label, const char* base32Secret) {
   safeCopy(savedTotpLabel, sizeof(savedTotpLabel), label);
   safeCopy(savedTotpBase32Secret, sizeof(savedTotpBase32Secret), base32Secret);
 }
+
+// =====================================================
+// Alte TOTP Klartextdaten aus Preferences löschen
+// Wichtig nach Umstieg auf /secrets.enc
+// =====================================================
+
+void totpSettingsClearPlaintextFlash() {
+  preferences.begin("totp", false);
+  preferences.clear();
+  preferences.end();
+}

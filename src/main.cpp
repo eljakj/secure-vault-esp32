@@ -447,11 +447,16 @@ void checkPin() {
       Serial.print("Load encrypted secrets: ");
       Serial.println(secretsLoaded ? "OK" : "FAILED");
 
-      if (!secretsLoaded) {
+      if (secretsLoaded) {
+        wifiSettingsClearPlaintextFlash();
+        totpSettingsClearPlaintextFlash();
+      } else {
         wifiSettingsClearRam();
         totpSettingsClearRam();
       }
     } else {
+      // Einmalige Migration:
+      // alte Preferences laden, encrypted speichern, danach Klartext löschen.
       wifiSettingsLoad();
       totpSettingsLoad();
 
@@ -459,6 +464,11 @@ void checkPin() {
 
       Serial.print("Create encrypted secrets: ");
       Serial.println(secretsSaved ? "OK" : "FAILED");
+
+      if (secretsSaved) {
+        wifiSettingsClearPlaintextFlash();
+        totpSettingsClearPlaintextFlash();
+      }
     }
 
     totpBegin();

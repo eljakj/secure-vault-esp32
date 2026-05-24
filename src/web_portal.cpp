@@ -728,12 +728,13 @@ static void handleWifiSave() {
   }
 
   if (password.length() == 0 && wifiSettingsHasCredentials()) {
-    wifiSettingsSave(ssid.c_str(), wifiSettingsGetPassword());
+    wifiSettingsSetRam(ssid.c_str(), wifiSettingsGetPassword());
   } else {
-    wifiSettingsSave(ssid.c_str(), password.c_str());
+    wifiSettingsSetRam(ssid.c_str(), password.c_str());
   }
 
   bool secretsOk = secretsSecureStorageSave();
+  wifiSettingsClearPlaintextFlash();
 
   Serial.print("Encrypted secrets save after Wi-Fi: ");
   Serial.println(secretsOk ? "OK" : "FAILED");
@@ -850,12 +851,13 @@ static void handleTotpSave() {
   }
 
   if (secret.length() == 0 && totpSettingsHasSecret()) {
-    totpSettingsSave(label.c_str(), totpSettingsGetBase32Secret());
+    totpSettingsSetRam(label.c_str(), totpSettingsGetBase32Secret());
   } else {
-    totpSettingsSave(label.c_str(), secret.c_str());
+    totpSettingsSetRam(label.c_str(), secret.c_str());
   }
 
   bool secretsOk = secretsSecureStorageSave();
+  totpSettingsClearPlaintextFlash();
 
   Serial.print("Encrypted secrets save after TOTP: ");
   Serial.println(secretsOk ? "OK" : "FAILED");
@@ -891,10 +893,11 @@ static void handleTotpClear() {
     return;
   }
 
-  totpSettingsClear();
+  totpSettingsClearRam();
   totpBegin();
 
   bool secretsOk = secretsSecureStorageSave();
+  totpSettingsClearPlaintextFlash();
 
   Serial.print("Encrypted secrets save after TOTP clear: ");
   Serial.println(secretsOk ? "OK" : "FAILED");

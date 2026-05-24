@@ -109,3 +109,14 @@ void wifiSettingsSetRam(const char* ssid, const char* password) {
   safeCopy(savedWifiSsid, sizeof(savedWifiSsid), ssid);
   safeCopy(savedWifiPassword, sizeof(savedWifiPassword), password);
 }
+
+// =====================================================
+// Alte Wi-Fi Klartextdaten aus Preferences löschen
+// Wichtig nach Umstieg auf /secrets.enc
+// =====================================================
+
+void wifiSettingsClearPlaintextFlash() {
+  preferences.begin("wifi", false);
+  preferences.clear();
+  preferences.end();
+}

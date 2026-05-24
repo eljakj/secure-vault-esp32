@@ -18,3 +18,4 @@ bool totpSettingsHasSecret();
 
 void totpSettingsClearRam();
 void totpSettingsSetRam(const char* label, const char* base32Secret);
+void totpSettingsClearPlaintextFlash();
