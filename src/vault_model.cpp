@@ -158,8 +158,24 @@ void vaultSaveToFlash() {
 // =====================================================
 
 void vaultClearPlaintextFlash() {
+  // Diese Migration soll nur einmal laufen.
+  // Danach benutzen wir /vault.enc als Hauptspeicher.
+  preferences.begin("migration", false);
+  bool alreadyCleared = preferences.getBool("plainVaultCleared", false);
+
+  if (alreadyCleared) {
+    preferences.end();
+    return;
+  }
+
+  preferences.end();
+
   preferences.begin("entries", false);
   preferences.clear();
+  preferences.end();
+
+  preferences.begin("migration", false);
+  preferences.putBool("plainVaultCleared", true);
   preferences.end();
 
   Serial.println("Plaintext vault Preferences cleared");

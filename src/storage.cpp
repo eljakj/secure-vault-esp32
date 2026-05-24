@@ -172,6 +172,10 @@ void clearAllStoredData() {
   preferences.clear();
   preferences.end();
 
+  preferences.begin("migration", false);
+  preferences.clear();
+  preferences.end();
+
   wifiSettingsClear();
   totpSettingsClear();
   vaultSecureStorageRemove();
