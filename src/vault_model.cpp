@@ -166,6 +166,25 @@ void vaultClearPlaintextFlash() {
 }
 
 // =====================================================
+// Vault komplett aus RAM löschen
+// Wichtig beim Lock:
+// Passwörter sollen nicht im RAM bleiben, wenn Gerät gesperrt ist.
+// =====================================================
+
+void vaultClearRam() {
+  for (int i = 0; i < MAX_VAULT_ENTRIES; i++) {
+    memset(vaultEntries[i].title, 0, sizeof(vaultEntries[i].title));
+    memset(vaultEntries[i].username, 0, sizeof(vaultEntries[i].username));
+    memset(vaultEntries[i].password, 0, sizeof(vaultEntries[i].password));
+    memset(vaultEntries[i].category, 0, sizeof(vaultEntries[i].category));
+  }
+
+  vaultCount = 0;
+
+  Serial.println("Vault RAM cleared");
+}
+
+// =====================================================
 // Eintrag hinzufügen
 // =====================================================
 

@@ -34,6 +34,7 @@ void vaultRestoreDefaultEntries();
 void vaultLoadFromFlash();
 void vaultSaveToFlash();
 void vaultClearPlaintextFlash();
+void vaultClearRam();
 
 bool vaultAddEntry(const char* title, const char* username, const char* password, const char* category);
 bool vaultDeleteEntry(int index);

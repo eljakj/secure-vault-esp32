@@ -328,6 +328,7 @@ void drawHeader(const char* title, const char* subtitle) {
 
 void lockDevice() {
   webPortalStop();
+  vaultClearRam();
   masterKeyClear();
 
   deviceUnlocked = false;
