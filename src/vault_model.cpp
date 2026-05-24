@@ -159,9 +159,10 @@ void vaultSaveToFlash() {
 
 void vaultClearPlaintextFlash() {
   // Diese Migration soll nur einmal laufen.
-  // Danach benutzen wir /vault.enc als Hauptspeicher.
+  // Wichtig: Preferences-Key-Namen muessen kurz sein.
+  // "pvClear" = Plain Vault Cleared.
   preferences.begin("migration", false);
-  bool alreadyCleared = preferences.getBool("plainVaultCleared", false);
+  bool alreadyCleared = preferences.getBool("pvClear", false);
 
   if (alreadyCleared) {
     preferences.end();
@@ -175,12 +176,11 @@ void vaultClearPlaintextFlash() {
   preferences.end();
 
   preferences.begin("migration", false);
-  preferences.putBool("plainVaultCleared", true);
+  preferences.putBool("pvClear", true);
   preferences.end();
 
   Serial.println("Plaintext vault Preferences cleared");
 }
-
 // =====================================================
 // Vault komplett aus RAM löschen
 // Wichtig beim Lock:
