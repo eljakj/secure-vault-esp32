@@ -5,38 +5,6 @@
 #include "vault_secure_storage.h"
 
 void loadPinHashFromFlash(char* storedPinHash) {
-  // =====================================================
-  // TEMP/DEV MIGRATION:
-  // Einmalig gespeicherten PIN auf Default-PIN setzen.
-  // Damit wird dein alter PIN 1234 automatisch zu 0000.
-  //
-  // Danach wird "pin0" gespeichert, damit spätere PIN-Änderungen
-  // nicht jedes Mal überschrieben werden.
-  // =====================================================
-
-  preferences.begin("migration", false);
-  bool pin0000Applied = preferences.getBool("pin0", false);
-  preferences.end();
-
-  if (!pin0000Applied) {
-    preferences.begin("security", false);
-    preferences.putString("pinHash", DEFAULT_PIN_HASH);
-    preferences.end();
-
-    // Alter Vault wurde mit altem PIN-Key verschluesselt.
-    // Fuer DEV/Test loeschen wir ihn einmalig beim Wechsel auf 0000.
-    vaultSecureStorageRemove();
-
-    preferences.begin("migration", false);
-    preferences.putBool("pin0", true);
-    preferences.end();
-
-    strncpy(storedPinHash, DEFAULT_PIN_HASH, 65);
-    Serial.println("PIN reset to default 0000");
-    Serial.println("Old encrypted vault removed");
-    return;
-  }
-
   preferences.begin("security", false);
 
   if (!preferences.isKey("pinHash")) {
