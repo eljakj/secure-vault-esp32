@@ -59,6 +59,19 @@ void masterKeyDeriveFromPin(const char* pin) {
 }
 
 // =====================================================
+// Master-Key durch neuen PIN ersetzen
+// Wird später bei Change-PIN benutzt:
+// 1. Vault ist bereits mit altem Key geladen
+// 2. Neuer PIN wird gesetzt
+// 3. Master-Key wird ersetzt
+// 4. Vault wird mit neuem Key gespeichert
+// =====================================================
+
+void masterKeyReplaceWithPin(const char* pin) {
+  masterKeyDeriveFromPin(pin);
+}
+
+// =====================================================
 // Master-Key aus RAM löschen
 // =====================================================
 

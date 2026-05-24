@@ -8,6 +8,7 @@
 // =====================================================
 
 void masterKeyDeriveFromPin(const char* pin);
+void masterKeyReplaceWithPin(const char* pin);
 void masterKeyClear();
 
 bool masterKeyIsReady();
