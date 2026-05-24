@@ -2458,6 +2458,53 @@ void handleButtons() {
 }
 
 // =====================================================
+// LittleFS Vault-Datei Test
+// Noch keine Verschlüsselung.
+// Testet nur: Serialisieren -> Datei schreiben -> lesen.
+// =====================================================
+
+void testVaultFileRoundTrip() {
+  Serial.println();
+  Serial.println("=== Vault File Roundtrip Test ===");
+
+  String serializedVault = vaultSerializeToText();
+
+  bool writeOk = vaultFileWriteText("/vault_test.txt", serializedVault);
+
+  Serial.print("Write /vault_test.txt: ");
+  Serial.println(writeOk ? "OK" : "FAILED");
+
+  if (!writeOk) {
+    Serial.println("===============================");
+    return;
+  }
+
+  String loadedVault = "";
+  bool readOk = vaultFileReadText("/vault_test.txt", loadedVault);
+
+  Serial.print("Read /vault_test.txt: ");
+  Serial.println(readOk ? "OK" : "FAILED");
+
+  if (!readOk) {
+    Serial.println("===============================");
+    return;
+  }
+
+  Serial.print("Written bytes: ");
+  Serial.println(serializedVault.length());
+
+  Serial.print("Read bytes: ");
+  Serial.println(loadedVault.length());
+
+  bool same = serializedVault == loadedVault;
+
+  Serial.print("Compare: ");
+  Serial.println(same ? "MATCH" : "DIFFERENT");
+
+  Serial.println("===============================");
+}
+
+// =====================================================
 // Arduino Setup / Loop
 // =====================================================
 
@@ -2490,7 +2537,7 @@ void setup() {
   // Vault-Einträge aus Flash laden
   vaultLoadFromFlash();
   vaultSerializerDebugPrint();
-
+  testVaultFileRoundTrip();
   loadRecentFromFlash(recentIndexes, maxRecentCount, recentCount);
   loadFavoritesFromFlash(favoriteIndexes, maxFavoriteCount, favoriteCount);
 
