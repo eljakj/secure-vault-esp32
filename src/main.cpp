@@ -17,6 +17,7 @@
 #include "vault_serializer.h"
 #include "vault_crypto.h"
 #include "vault_secure_storage.h"
+#include "secrets_secure_storage.h"
 
 // =====================================================
 // Globale Objekte
@@ -433,8 +434,33 @@ void checkPin() {
   if (strcmp(enteredPinHash, storedPinHash) == 0) {
     masterKeyDeriveFromPin(enteredPin);
 
-    wifiSettingsLoad();
-    totpSettingsLoad();
+    // Erst RAM leeren
+    wifiSettingsClearRam();
+    totpSettingsClearRam();
+
+    // Wi-Fi/TOTP Secrets bevorzugt aus encrypted /secrets.enc laden.
+    // Falls die Datei noch nicht existiert, laden wir einmalig alte Preferences
+    // und speichern sie danach encrypted.
+    if (secretsSecureStorageExists()) {
+      bool secretsLoaded = secretsSecureStorageLoad();
+
+      Serial.print("Load encrypted secrets: ");
+      Serial.println(secretsLoaded ? "OK" : "FAILED");
+
+      if (!secretsLoaded) {
+        wifiSettingsClearRam();
+        totpSettingsClearRam();
+      }
+    } else {
+      wifiSettingsLoad();
+      totpSettingsLoad();
+
+      bool secretsSaved = secretsSecureStorageSave();
+
+      Serial.print("Create encrypted secrets: ");
+      Serial.println(secretsSaved ? "OK" : "FAILED");
+    }
+
     totpBegin();
 
     if (vaultSecureStorageExists()) {
