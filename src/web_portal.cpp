@@ -855,18 +855,11 @@ static void handleInfo() {
   html += "<p><strong>SSID:</strong> ";
   html += htmlEscape(webPortalGetSsid());
   html += "</p>";
-
-  html += "<p><strong>Password:</strong></p>";
-  html += "<input id='portalPass' readonly value='";
-  html += htmlEscape(webPortalGetPassword());
-  html += "'>";
-
-  html += "<div class='actions'>";
-  html += "<button class='btn' onclick='copyPass()' type='button'>Copy Password</button>";
-  html += "</div>";
-
   html +=
-      "<p class='muted'>If your phone or PC already remembered an old password, use Forget Network "
+      "<p class='muted'>The Wi-Fi password is shown only on the device display while the portal is "
+      "running.</p>";
+  html +=
+      "<p class='muted'>If your phone or PC remembered an old password, use Forget Network "
       "once.</p>";
   html += "</div>";
 
@@ -876,15 +869,6 @@ static void handleInfo() {
       "<p class='muted'>Important: vault storage is not encrypted yet. The next big step is "
       "encrypted storage.</p>";
   html += "</div>";
-
-  html += "<script>";
-  html += "function copyPass(){";
-  html += "var p=document.getElementById('portalPass');";
-  html += "p.select();";
-  html += "p.setSelectionRange(0,99999);";
-  html += "navigator.clipboard&&navigator.clipboard.writeText(p.value);";
-  html += "}";
-  html += "</script>";
 
   html += pageFooter();
 
