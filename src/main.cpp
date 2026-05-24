@@ -514,7 +514,9 @@ void checkPin() {
       Serial.print("Load encrypted vault: ");
       Serial.println(loadedEncryptedVault ? "OK" : "FAILED");
 
-      if (!loadedEncryptedVault) {
+      if (loadedEncryptedVault) {
+        vaultClearPlaintextFlash();
+      } else {
         vaultRestoreDefaultEntries();
       }
     } else {

@@ -54,20 +54,22 @@ static void safeCopy(char* destination, size_t destinationSize, const char* sour
 
 // =====================================================
 // Vault-Änderungen speichern
-// Übergangsschritt:
-// - weiterhin Preferences speichern
-// - wenn Master-Key bereit ist, zusätzlich verschlüsselt speichern
+// Ab jetzt NICHT mehr als Klartext in Preferences speichern.
+// Hauptspeicher ist /vault.enc über LittleFS.
 // =====================================================
 
-static void vaultPersistChanges() {
-  vaultSaveToFlash();
-
-  if (masterKeyIsReady()) {
-    bool secureOk = vaultSecureStorageSave();
-
-    Serial.print("Encrypted vault save: ");
-    Serial.println(secureOk ? "OK" : "FAILED");
+static bool vaultPersistChanges() {
+  if (!masterKeyIsReady()) {
+    Serial.println("Encrypted vault save: FAILED, master key not ready");
+    return false;
   }
+
+  bool secureOk = vaultSecureStorageSave();
+
+  Serial.print("Encrypted vault save: ");
+  Serial.println(secureOk ? "OK" : "FAILED");
+
+  return secureOk;
 }
 
 // =====================================================
@@ -151,6 +153,19 @@ void vaultSaveToFlash() {
 }
 
 // =====================================================
+// Alte Klartext-Vault-Daten aus Preferences löschen
+// Wichtig nach Umstieg auf /vault.enc
+// =====================================================
+
+void vaultClearPlaintextFlash() {
+  preferences.begin("entries", false);
+  preferences.clear();
+  preferences.end();
+
+  Serial.println("Plaintext vault Preferences cleared");
+}
+
+// =====================================================
 // Eintrag hinzufügen
 // =====================================================
 
@@ -170,7 +185,10 @@ bool vaultAddEntry(const char* title, const char* username, const char* password
   safeCopy(vaultEntries[vaultCount].category, sizeof(vaultEntries[vaultCount].category), category);
 
   vaultCount++;
-  vaultPersistChanges();
+
+  if (!vaultPersistChanges()) {
+    return false;
+  }
 
   return true;
 }
@@ -199,7 +217,9 @@ bool vaultUpdateEntry(int index, const char* title, const char* username, const 
 
   safeCopy(vaultEntries[index].category, sizeof(vaultEntries[index].category), category);
 
-  vaultPersistChanges();
+  if (!vaultPersistChanges()) {
+    return false;
+  }
   return true;
 }
 
@@ -226,7 +246,9 @@ bool vaultDeleteEntry(int index) {
     clearVaultEntry(vaultCount);
   }
 
-  vaultPersistChanges();
+  if (!vaultPersistChanges()) {
+    return false;
+  }
 
   return true;
 }
