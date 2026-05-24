@@ -418,84 +418,7 @@ void drawLockScreen(const char* message) {
   drawFooter("DOWN +", "SELECT OK");
 }
 
-// =====================================================
-// Encrypted Vault-Datei Test
-// Testet:
-// Vault -> serialize -> encrypt -> file write
-// file read -> decrypt -> compare
-// =====================================================
 
-void testEncryptedVaultFileRoundTrip() {
-  Serial.println();
-  Serial.println("=== Encrypted Vault File Test ===");
-
-  if (!masterKeyIsReady()) {
-    Serial.println("Master key: NOT READY");
-    Serial.println("=================================");
-    return;
-  }
-
-  String plainVault = vaultSerializeToText();
-  String encryptedVault = "";
-  String loadedEncryptedVault = "";
-  String decryptedVault = "";
-
-  bool encryptOk = vaultCryptoEncryptText(plainVault, encryptedVault);
-
-  Serial.print("Encrypt vault: ");
-  Serial.println(encryptOk ? "OK" : "FAILED");
-
-  if (!encryptOk) {
-    Serial.println("=================================");
-    return;
-  }
-
-  bool writeOk = vaultFileWriteText("/vault_test.enc", encryptedVault);
-
-  Serial.print("Write /vault_test.enc: ");
-  Serial.println(writeOk ? "OK" : "FAILED");
-
-  if (!writeOk) {
-    Serial.println("=================================");
-    return;
-  }
-
-  bool readOk = vaultFileReadText("/vault_test.enc", loadedEncryptedVault);
-
-  Serial.print("Read /vault_test.enc: ");
-  Serial.println(readOk ? "OK" : "FAILED");
-
-  if (!readOk) {
-    Serial.println("=================================");
-    return;
-  }
-
-  bool decryptOk = vaultCryptoDecryptText(loadedEncryptedVault, decryptedVault);
-
-  Serial.print("Decrypt vault: ");
-  Serial.println(decryptOk ? "OK" : "FAILED");
-
-  if (!decryptOk) {
-    Serial.println("=================================");
-    return;
-  }
-
-  Serial.print("Plain bytes: ");
-  Serial.println(plainVault.length());
-
-  Serial.print("Encrypted bytes: ");
-  Serial.println(encryptedVault.length());
-
-  Serial.print("Loaded encrypted bytes: ");
-  Serial.println(loadedEncryptedVault.length());
-
-  bool same = plainVault == decryptedVault;
-
-  Serial.print("Compare decrypted: ");
-  Serial.println(same ? "MATCH" : "DIFFERENT");
-
-  Serial.println("=================================");
-}
 
 void checkPin() {
   enteredPin[4] = '\0';
@@ -2561,53 +2484,6 @@ void handleButtons() {
   } else if (currentScreen == SCREEN_RECENT_LIST) {
     handleRecentListInput(event);
   }
-}
-
-// =====================================================
-// LittleFS Vault-Datei Test
-// Noch keine Verschlüsselung.
-// Testet nur: Serialisieren -> Datei schreiben -> lesen.
-// =====================================================
-
-void testVaultFileRoundTrip() {
-  Serial.println();
-  Serial.println("=== Vault File Roundtrip Test ===");
-
-  String serializedVault = vaultSerializeToText();
-
-  bool writeOk = vaultFileWriteText("/vault_test.txt", serializedVault);
-
-  Serial.print("Write /vault_test.txt: ");
-  Serial.println(writeOk ? "OK" : "FAILED");
-
-  if (!writeOk) {
-    Serial.println("===============================");
-    return;
-  }
-
-  String loadedVault = "";
-  bool readOk = vaultFileReadText("/vault_test.txt", loadedVault);
-
-  Serial.print("Read /vault_test.txt: ");
-  Serial.println(readOk ? "OK" : "FAILED");
-
-  if (!readOk) {
-    Serial.println("===============================");
-    return;
-  }
-
-  Serial.print("Written bytes: ");
-  Serial.println(serializedVault.length());
-
-  Serial.print("Read bytes: ");
-  Serial.println(loadedVault.length());
-
-  bool same = serializedVault == loadedVault;
-
-  Serial.print("Compare: ");
-  Serial.println(same ? "MATCH" : "DIFFERENT");
-
-  Serial.println("===============================");
 }
 
 // =====================================================
