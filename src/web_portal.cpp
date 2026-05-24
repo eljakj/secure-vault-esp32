@@ -11,6 +11,7 @@
 #include "totp_settings.h"
 #include "totp_manager.h"
 #include "crypto_utils.h"
+#include "secrets_secure_storage.h"
 
 extern Preferences preferences;
 
@@ -732,6 +733,11 @@ static void handleWifiSave() {
     wifiSettingsSave(ssid.c_str(), password.c_str());
   }
 
+  bool secretsOk = secretsSecureStorageSave();
+
+  Serial.print("Encrypted secrets save after Wi-Fi: ");
+  Serial.println(secretsOk ? "OK" : "FAILED");
+
   String html = pageHeader("Wi-Fi Saved");
   html += "<div class='card'>";
   html += "<h2>Wi-Fi settings saved.</h2>";
@@ -849,6 +855,11 @@ static void handleTotpSave() {
     totpSettingsSave(label.c_str(), secret.c_str());
   }
 
+  bool secretsOk = secretsSecureStorageSave();
+
+  Serial.print("Encrypted secrets save after TOTP: ");
+  Serial.println(secretsOk ? "OK" : "FAILED");
+
   bool ok = totpBegin();
 
   String html = pageHeader("TOTP Saved");
@@ -882,6 +893,11 @@ static void handleTotpClear() {
 
   totpSettingsClear();
   totpBegin();
+
+  bool secretsOk = secretsSecureStorageSave();
+
+  Serial.print("Encrypted secrets save after TOTP clear: ");
+  Serial.println(secretsOk ? "OK" : "FAILED");
 
   String html = pageHeader("TOTP Cleared");
   html += "<div class='card'>";
