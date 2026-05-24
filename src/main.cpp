@@ -15,6 +15,7 @@
 #include "master_key.h"
 #include "vault_file.h"
 #include "vault_serializer.h"
+#include "vault_crypto.h"
 
 // =====================================================
 // Globale Objekte
@@ -424,6 +425,8 @@ void checkPin() {
 
   if (strcmp(enteredPinHash, storedPinHash) == 0) {
     masterKeyDeriveFromPin(enteredPin);
+    vaultCryptoDebugTest();
+
     deviceUnlocked = true;
 
     failedPinAttempts = 0;
