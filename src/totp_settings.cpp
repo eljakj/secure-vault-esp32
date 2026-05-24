@@ -102,3 +102,14 @@ void totpSettingsClearRam() {
   memset(savedTotpLabel, 0, sizeof(savedTotpLabel));
   memset(savedTotpBase32Secret, 0, sizeof(savedTotpBase32Secret));
 }
+
+// =====================================================
+// TOTP Daten nur in RAM setzen
+// Flash bleibt unverändert.
+// Wird später für encrypted secrets storage benutzt.
+// =====================================================
+
+void totpSettingsSetRam(const char* label, const char* base32Secret) {
+  safeCopy(savedTotpLabel, sizeof(savedTotpLabel), label);
+  safeCopy(savedTotpBase32Secret, sizeof(savedTotpBase32Secret), base32Secret);
+}

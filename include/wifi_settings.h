@@ -16,3 +16,4 @@ const char* wifiSettingsGetPassword();
 bool wifiSettingsHasCredentials();
 
 void wifiSettingsClearRam();
+void wifiSettingsSetRam(const char* ssid, const char* password);

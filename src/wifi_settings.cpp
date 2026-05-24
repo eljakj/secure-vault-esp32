@@ -98,3 +98,14 @@ void wifiSettingsClearRam() {
   memset(savedWifiSsid, 0, sizeof(savedWifiSsid));
   memset(savedWifiPassword, 0, sizeof(savedWifiPassword));
 }
+
+// =====================================================
+// Wi-Fi Daten nur in RAM setzen
+// Flash bleibt unverändert.
+// Wird später für encrypted secrets storage benutzt.
+// =====================================================
+
+void wifiSettingsSetRam(const char* ssid, const char* password) {
+  safeCopy(savedWifiSsid, sizeof(savedWifiSsid), ssid);
+  safeCopy(savedWifiPassword, sizeof(savedWifiPassword), password);
+}
