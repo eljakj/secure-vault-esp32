@@ -14,6 +14,7 @@
 #include "wifi_settings.h"
 #include "master_key.h"
 #include "vault_file.h"
+#include "vault_serializer.h"
 
 // =====================================================
 // Globale Objekte
@@ -2467,7 +2468,7 @@ void setup() {
   delay(300);
 
   bool fsOk = vaultFileBegin();
-  
+
   if (fsOk) {
     Serial.println("LittleFS started");
     vaultFileDebugPrintInfo();
@@ -2488,6 +2489,7 @@ void setup() {
 
   // Vault-Einträge aus Flash laden
   vaultLoadFromFlash();
+  vaultSerializerDebugPrint();
 
   loadRecentFromFlash(recentIndexes, maxRecentCount, recentCount);
   loadFavoritesFromFlash(favoriteIndexes, maxFavoriteCount, favoriteCount);
