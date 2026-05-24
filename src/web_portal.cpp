@@ -1003,18 +1003,18 @@ bool webPortalStart() {
   server.on("/login_submit", HTTP_POST, handleLoginSubmit);
   server.on("/logout", HTTP_GET, handleLogout);
 
-  server.on("/favicon.ico", HTTP_GET, handleEmptyResponse);
-  server.on("/robots.txt", HTTP_GET, handleEmptyResponse);
-  server.on("/manifest.json", HTTP_GET, handleEmptyResponse);
-  server.on("/site.webmanifest", HTTP_GET, handleEmptyResponse);
-  server.on("/browserconfig.xml", HTTP_GET, handleEmptyResponse);
-  server.on("/apple-touch-icon.png", HTTP_GET, handleEmptyResponse);
-  server.on("/apple-touch-icon-precomposed.png", HTTP_GET, handleEmptyResponse);
-  server.on("/apple-touch-icon-120x120.png", HTTP_GET, handleEmptyResponse);
-  server.on("/apple-touch-icon-152x152.png", HTTP_GET, handleEmptyResponse);
-  server.on("/apple-touch-icon-180x180.png", HTTP_GET, handleEmptyResponse);
-  server.on("/android-chrome-192x192.png", HTTP_GET, handleEmptyResponse);
-  server.on("/android-chrome-512x512.png", HTTP_GET, handleEmptyResponse);
+  server.on("/favicon.ico", HTTP_ANY, handleEmptyResponse);
+  server.on("/robots.txt", HTTP_ANY, handleEmptyResponse);
+  server.on("/manifest.json", HTTP_ANY, handleEmptyResponse);
+  server.on("/site.webmanifest", HTTP_ANY, handleEmptyResponse);
+  server.on("/browserconfig.xml", HTTP_ANY, handleEmptyResponse);
+  server.on("/apple-touch-icon.png", HTTP_ANY, handleEmptyResponse);
+  server.on("/apple-touch-icon-precomposed.png", HTTP_ANY, handleEmptyResponse);
+  server.on("/apple-touch-icon-120x120.png", HTTP_ANY, handleEmptyResponse);
+  server.on("/apple-touch-icon-152x152.png", HTTP_ANY, handleEmptyResponse);
+  server.on("/apple-touch-icon-180x180.png", HTTP_ANY, handleEmptyResponse);
+  server.on("/android-chrome-192x192.png", HTTP_ANY, handleEmptyResponse);
+  server.on("/android-chrome-512x512.png", HTTP_ANY, handleEmptyResponse);
 
   server.on("/", HTTP_GET, handleRoot);
   server.on("/add", HTTP_GET, handleAdd);

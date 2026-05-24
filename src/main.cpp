@@ -446,7 +446,20 @@ void checkPin() {
       if (loadedEncryptedVault) {
         vaultClearPlaintextFlash();
       } else {
+        // DEV-Fix:
+        // Wenn PIN/Key geändert wurde, kann die alte /vault.enc nicht mehr entschlüsselt werden.
+        // Dann löschen wir die alte Datei und erstellen einen neuen leeren Vault mit aktuellem
+        // PIN-Key.
+        Serial.println("Encrypted vault could not be decrypted.");
+        Serial.println("Removing old encrypted vault and creating a new empty vault.");
+
+        vaultSecureStorageRemove();
         vaultRestoreDefaultEntries();
+
+        bool savedEncryptedVault = vaultSecureStorageSave();
+
+        Serial.print("Create new encrypted vault: ");
+        Serial.println(savedEncryptedVault ? "OK" : "FAILED");
       }
     } else {
       vaultRestoreDefaultEntries();

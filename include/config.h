@@ -66,8 +66,8 @@ const unsigned long AUTO_LOCK_MS = 60000;
 const int MAX_PIN_ATTEMPTS = 3;
 const unsigned long PIN_LOCKOUT_MS = 30000;
 
-// SHA-256 Hash von Demo-PIN "1234"
+// SHA-256 Hash von Demo-PIN "0000"
 // Wird nur benutzt, wenn im Flash noch kein PIN-Hash existiert.
 const char DEFAULT_PIN_HASH[] =
-  "03ac674216f3e15c761ee1a5e255f067"
-  "953623c8b388b4459e13f978d7c846f4";
+  "9af15b336e6a9619928537df30b2e6a2"
+  "376569fcf9d7e773eccede65606529a0";
