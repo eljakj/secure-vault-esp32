@@ -16,6 +16,7 @@
 #include "vault_file.h"
 #include "vault_serializer.h"
 #include "vault_crypto.h"
+#include "vault_secure_storage.h"
 
 // =====================================================
 // Globale Objekte
@@ -417,6 +418,85 @@ void drawLockScreen(const char* message) {
   drawFooter("DOWN +", "SELECT OK");
 }
 
+// =====================================================
+// Encrypted Vault-Datei Test
+// Testet:
+// Vault -> serialize -> encrypt -> file write
+// file read -> decrypt -> compare
+// =====================================================
+
+void testEncryptedVaultFileRoundTrip() {
+  Serial.println();
+  Serial.println("=== Encrypted Vault File Test ===");
+
+  if (!masterKeyIsReady()) {
+    Serial.println("Master key: NOT READY");
+    Serial.println("=================================");
+    return;
+  }
+
+  String plainVault = vaultSerializeToText();
+  String encryptedVault = "";
+  String loadedEncryptedVault = "";
+  String decryptedVault = "";
+
+  bool encryptOk = vaultCryptoEncryptText(plainVault, encryptedVault);
+
+  Serial.print("Encrypt vault: ");
+  Serial.println(encryptOk ? "OK" : "FAILED");
+
+  if (!encryptOk) {
+    Serial.println("=================================");
+    return;
+  }
+
+  bool writeOk = vaultFileWriteText("/vault_test.enc", encryptedVault);
+
+  Serial.print("Write /vault_test.enc: ");
+  Serial.println(writeOk ? "OK" : "FAILED");
+
+  if (!writeOk) {
+    Serial.println("=================================");
+    return;
+  }
+
+  bool readOk = vaultFileReadText("/vault_test.enc", loadedEncryptedVault);
+
+  Serial.print("Read /vault_test.enc: ");
+  Serial.println(readOk ? "OK" : "FAILED");
+
+  if (!readOk) {
+    Serial.println("=================================");
+    return;
+  }
+
+  bool decryptOk = vaultCryptoDecryptText(loadedEncryptedVault, decryptedVault);
+
+  Serial.print("Decrypt vault: ");
+  Serial.println(decryptOk ? "OK" : "FAILED");
+
+  if (!decryptOk) {
+    Serial.println("=================================");
+    return;
+  }
+
+  Serial.print("Plain bytes: ");
+  Serial.println(plainVault.length());
+
+  Serial.print("Encrypted bytes: ");
+  Serial.println(encryptedVault.length());
+
+  Serial.print("Loaded encrypted bytes: ");
+  Serial.println(loadedEncryptedVault.length());
+
+  bool same = plainVault == decryptedVault;
+
+  Serial.print("Compare decrypted: ");
+  Serial.println(same ? "MATCH" : "DIFFERENT");
+
+  Serial.println("=================================");
+}
+
 void checkPin() {
   enteredPin[4] = '\0';
 
@@ -425,7 +505,28 @@ void checkPin() {
 
   if (strcmp(enteredPinHash, storedPinHash) == 0) {
     masterKeyDeriveFromPin(enteredPin);
-    vaultCryptoDebugTest();
+
+    vaultSecureStorageDebugPrint();
+
+    if (vaultSecureStorageExists()) {
+      bool loadedEncryptedVault = vaultSecureStorageLoad();
+
+      Serial.print("Load encrypted vault: ");
+      Serial.println(loadedEncryptedVault ? "OK" : "FAILED");
+
+      if (!loadedEncryptedVault) {
+        vaultRestoreDefaultEntries();
+      }
+    } else {
+      vaultRestoreDefaultEntries();
+
+      bool savedEncryptedVault = vaultSecureStorageSave();
+
+      Serial.print("Create encrypted vault: ");
+      Serial.println(savedEncryptedVault ? "OK" : "FAILED");
+    }
+
+    vaultSerializerDebugPrint();
 
     deviceUnlocked = true;
 
@@ -2537,10 +2638,9 @@ void setup() {
 
   loadPinHashFromFlash(storedPinHash);
 
-  // Vault-Einträge aus Flash laden
-  vaultLoadFromFlash();
-  vaultSerializerDebugPrint();
-  testVaultFileRoundTrip();
+  // Vault bleibt bis zum PIN-Unlock leer.
+  // Nach erfolgreichem PIN wird /vault.enc geladen.
+  vaultRestoreDefaultEntries();
   loadRecentFromFlash(recentIndexes, maxRecentCount, recentCount);
   loadFavoritesFromFlash(favoriteIndexes, maxFavoriteCount, favoriteCount);
 

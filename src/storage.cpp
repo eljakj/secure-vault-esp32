@@ -1,7 +1,7 @@
 #include "storage.h"
 #include "wifi_settings.h"
-
 #include "totp_settings.h"
+#include "vault_secure_storage.h"
 
 // =====================================================
 // PIN-Hash aus Flash laden
@@ -112,7 +112,6 @@ void saveFavoritesToFlash(const int* favoriteIndexes, int maxFavoriteCount, int 
   preferences.end();
 }
 
-
 // =====================================================
 // Alles aus Preferences löschen
 // PIN, Favorites, Recent, Settings
@@ -141,4 +140,5 @@ void clearAllStoredData() {
 
   wifiSettingsClear();
   totpSettingsClear();
+  vaultSecureStorageRemove();
 }

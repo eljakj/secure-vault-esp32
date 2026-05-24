@@ -892,6 +892,16 @@ static void handleInfo() {
 }
 
 // =====================================================
+// Browser-Nebenanfragen ignorieren
+// Beispiel: favicon.ico, robots.txt
+// =====================================================
+
+static void handleEmptyResponse() {
+  webPortalMarkActivity();
+  server.send(204, "text/plain", "");
+}
+
+// =====================================================
 // Portal starten / stoppen
 // =====================================================
 
@@ -927,6 +937,11 @@ bool webPortalStart() {
   server.on("/login", HTTP_GET, handleLogin);
   server.on("/login_submit", HTTP_POST, handleLoginSubmit);
   server.on("/logout", HTTP_GET, handleLogout);
+
+  server.on("/favicon.ico", HTTP_GET, handleEmptyResponse);
+  server.on("/apple-touch-icon.png", HTTP_GET, handleEmptyResponse);
+  server.on("/apple-touch-icon-precomposed.png", HTTP_GET, handleEmptyResponse);
+  server.on("/robots.txt", HTTP_GET, handleEmptyResponse);
 
   server.on("/", HTTP_GET, handleRoot);
   server.on("/add", HTTP_GET, handleAdd);

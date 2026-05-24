@@ -1,5 +1,9 @@
 #include "vault_model.h"
+
 #include <Preferences.h>
+
+#include "master_key.h"
+#include "vault_secure_storage.h"
 
 extern Preferences preferences;
 
@@ -46,6 +50,24 @@ static void safeCopy(char* destination, size_t destinationSize, const char* sour
 
   strncpy(destination, source, destinationSize - 1);
   destination[destinationSize - 1] = '\0';
+}
+
+// =====================================================
+// Vault-Änderungen speichern
+// Übergangsschritt:
+// - weiterhin Preferences speichern
+// - wenn Master-Key bereit ist, zusätzlich verschlüsselt speichern
+// =====================================================
+
+static void vaultPersistChanges() {
+  vaultSaveToFlash();
+
+  if (masterKeyIsReady()) {
+    bool secureOk = vaultSecureStorageSave();
+
+    Serial.print("Encrypted vault save: ");
+    Serial.println(secureOk ? "OK" : "FAILED");
+  }
 }
 
 // =====================================================
@@ -132,7 +154,8 @@ void vaultSaveToFlash() {
 // Eintrag hinzufügen
 // =====================================================
 
-bool vaultAddEntry(const char* title, const char* username, const char* password, const char* category) {
+bool vaultAddEntry(const char* title, const char* username, const char* password,
+                   const char* category) {
   if (vaultCount >= MAX_VAULT_ENTRIES) {
     return false;
   }
@@ -147,7 +170,7 @@ bool vaultAddEntry(const char* title, const char* username, const char* password
   safeCopy(vaultEntries[vaultCount].category, sizeof(vaultEntries[vaultCount].category), category);
 
   vaultCount++;
-  vaultSaveToFlash();
+  vaultPersistChanges();
 
   return true;
 }
@@ -156,7 +179,8 @@ bool vaultAddEntry(const char* title, const char* username, const char* password
 // Eintrag bearbeiten
 // =====================================================
 
-bool vaultUpdateEntry(int index, const char* title, const char* username, const char* password, const char* category) {
+bool vaultUpdateEntry(int index, const char* title, const char* username, const char* password,
+                      const char* category) {
   if (!vaultIsValidIndex(index)) {
     return false;
   }
@@ -175,7 +199,7 @@ bool vaultUpdateEntry(int index, const char* title, const char* username, const 
 
   safeCopy(vaultEntries[index].category, sizeof(vaultEntries[index].category), category);
 
-  vaultSaveToFlash();
+  vaultPersistChanges();
   return true;
 }
 
@@ -202,7 +226,7 @@ bool vaultDeleteEntry(int index) {
     clearVaultEntry(vaultCount);
   }
 
-  vaultSaveToFlash();
+  vaultPersistChanges();
 
   return true;
 }
@@ -216,21 +240,25 @@ bool vaultIsValidIndex(int index) {
 }
 
 const char* vaultGetTitle(int index) {
-  if (!vaultIsValidIndex(index)) return "";
+  if (!vaultIsValidIndex(index))
+    return "";
   return vaultEntries[index].title;
 }
 
 const char* vaultGetUsername(int index) {
-  if (!vaultIsValidIndex(index)) return "";
+  if (!vaultIsValidIndex(index))
+    return "";
   return vaultEntries[index].username;
 }
 
 const char* vaultGetPassword(int index) {
-  if (!vaultIsValidIndex(index)) return "";
+  if (!vaultIsValidIndex(index))
+    return "";
   return vaultEntries[index].password;
 }
 
 const char* vaultGetCategory(int index) {
-  if (!vaultIsValidIndex(index)) return "";
+  if (!vaultIsValidIndex(index))
+    return "";
   return vaultEntries[index].category;
 }
