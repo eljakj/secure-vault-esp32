@@ -196,8 +196,6 @@ void vaultClearRam() {
   }
 
   vaultCount = 0;
-
-  Serial.println("Vault RAM cleared");
 }
 
 // =====================================================
