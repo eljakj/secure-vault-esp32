@@ -79,6 +79,12 @@ unsigned long lastLockoutRedrawTime = 0;
 unsigned long lastUserActivityTime = 0;
 
 // =====================================================
+// TOTP Multi-Account UI
+// =====================================================
+
+int selectedTotpAccount = 0;
+
+// =====================================================
 // Menü-Daten
 // =====================================================
 
@@ -1121,23 +1127,44 @@ void drawKeyboardLayoutScreen() {
 void drawTotpView(bool syncing, const char* message) {
   currentScreen = SCREEN_TOTP_VIEW;
 
-  drawHeader("TOTP", totpGetLabel());
+  int totpCount = totpSettingsGetCount();
 
-  if (!totpHasSecret()) {
+  if (totpCount <= 0) {
+    selectedTotpAccount = 0;
+    drawHeader("TOTP", "No account");
+
     tft.setTextColor(COLOR_TEXT, COLOR_BG);
     tft.setTextSize(1);
     tft.setCursor(10, 110);
-    tft.println("No TOTP secret saved.");
+    tft.println("No TOTP account saved.");
 
     tft.setTextColor(COLOR_MUTED, COLOR_BG);
     tft.setCursor(10, 150);
     tft.println("Use Web Portal");
-    tft.println("to add a TOTP");
-    tft.println("Base32 secret.");
+    tft.println("to add TOTP");
+    tft.println("accounts.");
 
     drawFooter("WEB PORTAL", "BACK");
     return;
   }
+
+  if (selectedTotpAccount < 0) {
+    selectedTotpAccount = 0;
+  }
+
+  if (selectedTotpAccount >= totpCount) {
+    selectedTotpAccount = 0;
+  }
+
+  drawHeader("TOTP", totpSettingsGetLabelAt(selectedTotpAccount));
+
+  tft.setTextColor(COLOR_MUTED, COLOR_BG);
+  tft.setTextSize(1);
+  tft.setCursor(10, 82);
+  tft.print("Account ");
+  tft.print(selectedTotpAccount + 1);
+  tft.print("/");
+  tft.println(totpCount);
 
   if (syncing) {
     tft.setTextColor(COLOR_TEXT, COLOR_BG);
@@ -1158,11 +1185,11 @@ void drawTotpView(bool syncing, const char* message) {
 
     tft.setTextColor(COLOR_MUTED, COLOR_BG);
     tft.setCursor(10, 160);
-    tft.println("DOWN = sync time");
-    tft.println("SELECT = type code");
+    tft.println("DOWN = next account");
+    tft.println("SELECT = type/sync");
     tft.println("HOLD SELECT = back");
 
-    drawFooter("DOWN SYNC", "SELECT");
+    drawFooter("NEXT", "SELECT");
     return;
   }
 
@@ -1174,14 +1201,16 @@ void drawTotpView(bool syncing, const char* message) {
 
     tft.setTextColor(COLOR_MUTED, COLOR_BG);
     tft.setCursor(10, 150);
-    tft.println("Press DOWN to sync");
-    tft.println("over Wi-Fi.");
+    tft.println("Press SELECT to");
+    tft.println("sync over Wi-Fi.");
+    tft.println("");
+    tft.println("DOWN = account");
 
-    drawFooter("DOWN SYNC", "WAIT");
+    drawFooter("NEXT", "SYNC");
     return;
   }
 
-  uint32_t code = totpGetCurrentCode();
+  uint32_t code = totpGenerateCodeFromBase32(totpSettingsGetBase32SecretAt(selectedTotpAccount));
   int remaining = totpGetSecondsRemaining();
 
   char codeText[8];
@@ -1206,9 +1235,10 @@ void drawTotpView(bool syncing, const char* message) {
 
   tft.setTextColor(COLOR_MUTED, COLOR_BG);
   tft.setCursor(10, 250);
-  tft.println("SELECT types code via USB");
+  tft.println("SELECT types code");
+  tft.println("DOWN = next account");
 
-  drawFooter("DOWN SYNC", "TYPE");
+  drawFooter("NEXT", "TYPE");
 }
 
 // =====================================================
@@ -1221,12 +1251,23 @@ void typeCurrentTotpCode() {
     return;
   }
 
-  uint32_t code = totpGetCurrentCode();
+  int totpCount = totpSettingsGetCount();
+
+  if (totpCount <= 0) {
+    drawTotpView(false, "No TOTP account.");
+    return;
+  }
+
+  if (selectedTotpAccount < 0 || selectedTotpAccount >= totpCount) {
+    selectedTotpAccount = 0;
+  }
+
+  uint32_t code = totpGenerateCodeFromBase32(totpSettingsGetBase32SecretAt(selectedTotpAccount));
 
   char codeText[8];
   sprintf(codeText, "%06lu", (unsigned long)code);
 
-  drawSendingScreen("TOTP Code", "2FA code typed");
+  drawSendingScreen(totpSettingsGetLabelAt(selectedTotpAccount), "2FA code typed");
   delay(250);
 
   hidSendText(codeText);
@@ -2119,6 +2160,7 @@ void handleMenuInput(ButtonEvent event) {
     if (selectedMenuItem == 0) {
       drawVaultHome();
     } else if (selectedMenuItem == 1) {
+      selectedTotpAccount = 0;
       drawTotpView(false, "");
     } else if (selectedMenuItem == 2) {
       generatedPasswordReady = false;
@@ -2273,14 +2315,20 @@ void handleSendingInput(ButtonEvent event) {
 }
 
 void handleTotpInput(ButtonEvent event) {
-  // DOWN kurz: Zeit neu synchronisieren
   if (event == BUTTON_DOWN_SHORT) {
-    syncTotpTime();
+    int totpCount = totpSettingsGetCount();
+
+    if (totpCount > 0) {
+      selectedTotpAccount++;
+
+      if (selectedTotpAccount >= totpCount) {
+        selectedTotpAccount = 0;
+      }
+    }
+
+    drawTotpView(false, "");
   }
 
-  // SELECT kurz:
-  // - Wenn Zeit noch nicht gültig ist: synchronisieren
-  // - Wenn Zeit gültig ist: aktuellen TOTP-Code per USB tippen
   if (event == BUTTON_SELECT_SHORT) {
     if (!totpIsTimeValid()) {
       syncTotpTime();
