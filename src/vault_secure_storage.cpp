@@ -4,6 +4,7 @@
 #include "vault_serializer.h"
 #include "vault_crypto.h"
 #include "master_key.h"
+#include "debug_log.h"
 
 // =====================================================
 // Datei-Pfad
@@ -25,7 +26,7 @@ bool vaultSecureStorageExists() {
 
 bool vaultSecureStorageSave() {
   if (!masterKeyIsReady()) {
-    Serial.println("vaultSecureStorageSave: master key not ready");
+    DEBUG_PRINTLN("vaultSecureStorageSave: master key not ready");
     return false;
   }
 
@@ -35,14 +36,14 @@ bool vaultSecureStorageSave() {
   bool encryptOk = vaultCryptoEncryptText(plainVault, encryptedVault);
 
   if (!encryptOk) {
-    Serial.println("vaultSecureStorageSave: encrypt failed");
+    DEBUG_PRINTLN("vaultSecureStorageSave: encrypt failed");
     return false;
   }
 
   bool writeOk = vaultFileWriteText(VAULT_ENCRYPTED_PATH, encryptedVault);
 
   if (!writeOk) {
-    Serial.println("vaultSecureStorageSave: file write failed");
+    DEBUG_PRINTLN("vaultSecureStorageSave: file write failed");
     return false;
   }
 
@@ -55,12 +56,12 @@ bool vaultSecureStorageSave() {
 
 bool vaultSecureStorageLoad() {
   if (!masterKeyIsReady()) {
-    Serial.println("vaultSecureStorageLoad: master key not ready");
+    DEBUG_PRINTLN("vaultSecureStorageLoad: master key not ready");
     return false;
   }
 
   if (!vaultSecureStorageExists()) {
-    Serial.println("vaultSecureStorageLoad: no encrypted vault file");
+    DEBUG_PRINTLN("vaultSecureStorageLoad: no encrypted vault file");
     return false;
   }
 
@@ -68,7 +69,7 @@ bool vaultSecureStorageLoad() {
   bool readOk = vaultFileReadText(VAULT_ENCRYPTED_PATH, encryptedVault);
 
   if (!readOk) {
-    Serial.println("vaultSecureStorageLoad: file read failed");
+    DEBUG_PRINTLN("vaultSecureStorageLoad: decrypt failed");
     return false;
   }
 
@@ -76,14 +77,14 @@ bool vaultSecureStorageLoad() {
   bool decryptOk = vaultCryptoDecryptText(encryptedVault, plainVault);
 
   if (!decryptOk) {
-    Serial.println("vaultSecureStorageLoad: decrypt failed");
+    DEBUG_PRINTLN("vaultSecureStorageLoad: decrypt failed");
     return false;
   }
 
   bool parseOk = vaultDeserializeFromText(plainVault);
 
   if (!parseOk) {
-    Serial.println("vaultSecureStorageLoad: deserialize failed");
+    DEBUG_PRINTLN("vaultSecureStorageLoad: deserialize failed");
     return false;
   }
 

@@ -6,6 +6,7 @@
 
 #include "wifi_settings.h"
 #include "totp_settings.h"
+#include "debug_log.h"
 
 // =====================================================
 // Datei-Pfad
@@ -181,7 +182,7 @@ bool secretsSecureStorageExists() {
 
 bool secretsSecureStorageSave() {
   if (!masterKeyIsReady()) {
-    Serial.println("secretsSecureStorageSave: master key not ready");
+    DEBUG_PRINTLN("secretsSecureStorageSave: master key not ready");
     return false;
   }
 
@@ -191,7 +192,7 @@ bool secretsSecureStorageSave() {
   bool encryptOk = vaultCryptoEncryptText(plainSecrets, encryptedSecrets);
 
   if (!encryptOk) {
-    Serial.println("secretsSecureStorageSave: encrypt failed");
+    DEBUG_PRINTLN("secretsSecureStorageSave: encrypt failed");
     return false;
   }
 
@@ -211,7 +212,7 @@ bool secretsSecureStorageSave() {
 
 bool secretsSecureStorageLoad() {
   if (!masterKeyIsReady()) {
-    Serial.println("secretsSecureStorageLoad: master key not ready");
+    DEBUG_PRINTLN("secretsSecureStorageLoad: master key not ready");
     return false;
   }
 
@@ -223,7 +224,7 @@ bool secretsSecureStorageLoad() {
   bool readOk = vaultFileReadText(SECRETS_ENCRYPTED_PATH, encryptedSecrets);
 
   if (!readOk) {
-    Serial.println("secretsSecureStorageLoad: file read failed");
+    DEBUG_PRINTLN("secretsSecureStorageLoad: file read failed");
     return false;
   }
 
@@ -231,14 +232,14 @@ bool secretsSecureStorageLoad() {
   bool decryptOk = vaultCryptoDecryptText(encryptedSecrets, plainSecrets);
 
   if (!decryptOk) {
-    Serial.println("secretsSecureStorageLoad: decrypt failed");
+    DEBUG_PRINTLN("secretsSecureStorageLoad: decrypt failed");
     return false;
   }
 
   bool parseOk = secretsDeserializeFromText(plainSecrets);
 
   if (!parseOk) {
-    Serial.println("secretsSecureStorageLoad: deserialize failed");
+    DEBUG_PRINTLN("secretsSecureStorageLoad: deserialize failed");
     return false;
   }
 
