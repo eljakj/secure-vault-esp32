@@ -3,6 +3,7 @@
 #include "wifi_settings.h"
 #include "totp_settings.h"
 #include "vault_secure_storage.h"
+#include "secrets_secure_storage.h"
 
 void loadPinHashFromFlash(char* storedPinHash) {
   preferences.begin("security", false);
@@ -171,4 +172,5 @@ void clearAllStoredData() {
   wifiSettingsClear();
   totpSettingsClear();
   vaultSecureStorageRemove();
+  secretsSecureStorageRemove();
 }

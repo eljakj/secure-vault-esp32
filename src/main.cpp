@@ -832,7 +832,10 @@ void saveNewPin() {
   savePinHashToFlash(newPinHash, storedPinHash);
   masterKeyReplaceWithPin(newPin);
 
-  bool reEncrypted = vaultSecureStorageSave();
+  bool vaultReEncrypted = vaultSecureStorageSave();
+  bool secretsReEncrypted = secretsSecureStorageSave();
+
+  bool reEncrypted = vaultReEncrypted && secretsReEncrypted;
 
   resetChangePinFlow();
 
@@ -848,7 +851,7 @@ void saveNewPin() {
     tft.println("Vault encrypted");
     tft.println("with new PIN.");
 
-    Serial.println("PIN changed and vault re-encrypted: OK");
+    Serial.println("PIN changed and vault/secrets re-encrypted: OK");
   } else {
     drawHeader("PIN Error", "Vault not saved");
 
@@ -861,7 +864,7 @@ void saveNewPin() {
     tft.println("");
     tft.println("Do not power off.");
 
-    Serial.println("PIN changed but vault re-encryption FAILED");
+    Serial.println("PIN changed but vault/secrets re-encryption FAILED");
   }
 
   drawFooter("HOLD SEL", "BACK");
