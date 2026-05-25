@@ -18,9 +18,10 @@ static size_t totpSecretLen = 0;
 static const char* NTP_SERVER_1 = "pool.ntp.org";
 static const char* NTP_SERVER_2 = "time.google.com";
 
-// Deutschland: UTC+1 / Sommerzeit wird hier noch nicht automatisch behandelt.
-// Für Demo reicht das. TOTP selbst benutzt Unix-Zeit, Offset ist dafür egal,
-// aber configTime braucht Werte.
+// TOTP selbst benutzt Unix-Zeit.
+// Offset ist für die Code-Berechnung egal,
+// configTime braucht trotzdem Werte.
+
 static const long GMT_OFFSET_SEC = 0;
 static const int DAYLIGHT_OFFSET_SEC = 0;
 
@@ -29,9 +30,12 @@ static const int DAYLIGHT_OFFSET_SEC = 0;
 // =====================================================
 
 static int base32Value(char c) {
-  if (c >= 'A' && c <= 'Z') return c - 'A';
-  if (c >= 'a' && c <= 'z') return c - 'a';
-  if (c >= '2' && c <= '7') return c - '2' + 26;
+  if (c >= 'A' && c <= 'Z')
+    return c - 'A';
+  if (c >= 'a' && c <= 'z')
+    return c - 'a';
+  if (c >= '2' && c <= '7')
+    return c - '2' + 26;
   return -1;
 }
 
@@ -80,11 +84,7 @@ bool totpBegin() {
     return false;
   }
 
-  totpSecretLen = decodeBase32(
-    totpSettingsGetBase32Secret(),
-    totpSecret,
-    sizeof(totpSecret)
-  );
+  totpSecretLen = decodeBase32(totpSettingsGetBase32Secret(), totpSecret, sizeof(totpSecret));
 
   return totpSecretLen > 0;
 }

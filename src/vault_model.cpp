@@ -9,12 +9,14 @@
 extern Preferences preferences;
 
 // =====================================================
-// Standard-Demo-Daten
-// Später ersetzen wir das durch verschlüsselte Daten.
+// Standard-Vault-Zustand
+// =====================================================
+//
+// Das Gerät startet ohne vorinstallierte Passwörter.
+// Einträge werden über das lokale Web Portal hinzugefügt.
+// Die gespeicherten Vault-Daten liegen verschlüsselt in /vault.enc.
 // =====================================================
 
-// Ab jetzt startet das Gerät ohne Demo-Passwörter.
-// Einträge werden über das lokale Web Portal hinzugefügt.
 static const int DEFAULT_VAULT_COUNT = 0;
 
 VaultEntry vaultEntries[MAX_VAULT_ENTRIES];
