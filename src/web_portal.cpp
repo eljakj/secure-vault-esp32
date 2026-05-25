@@ -13,6 +13,7 @@
 #include "crypto_utils.h"
 #include "secrets_secure_storage.h"
 #include "debug_log.h"
+#include "vault_file.h"
 
 extern Preferences preferences;
 
@@ -1044,6 +1045,85 @@ static void handleTotpClear() {
 }
 
 // =====================================================
+// Backup Export
+// Zeigt verschlüsselte Dateien als Text.
+// Wichtig: Das Backup bleibt verschlüsselt.
+// =====================================================
+
+static void handleBackupExport() {
+  webPortalMarkActivity();
+
+  if (!requirePortalLogin()) {
+    return;
+  }
+
+  String vaultData = "";
+  String secretsData = "";
+
+  bool vaultOk = vaultFileReadText("/vault.enc", vaultData);
+  bool secretsOk = vaultFileReadText("/secrets.enc", secretsData);
+
+  String html = pageHeader("Backup Export");
+
+  html += "<div class='card'>";
+  html += "<h2>Encrypted Backup</h2>";
+  html +=
+      "<p class='muted'>Copy this backup and store it safely. It is encrypted with your current "
+      "PIN-derived key.</p>";
+  html +=
+      "<p class='muted'>To restore it later, you need the same PIN or a compatible restore "
+      "flow.</p>";
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<h2>Status</h2>";
+
+  html += "<p><strong>vault.enc:</strong> ";
+  html += vaultOk ? "OK" : "MISSING";
+  html += "</p>";
+
+  html += "<p><strong>secrets.enc:</strong> ";
+  html += secretsOk ? "OK" : "MISSING";
+  html += "</p>";
+
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<h2>Backup Text</h2>";
+  html += "<p class='muted'>Select all text below and copy it.</p>";
+
+  html +=
+      "<textarea readonly "
+      "style='width:100%;height:420px;box-sizing:border-box;border-radius:12px;background:#0e0e0e;"
+      "color:#fff;border:1px solid #333;padding:12px;font-family:monospace;font-size:12px;'>";
+
+  html += "-----BEGIN SECUREVAULT BACKUP V1-----\n";
+
+  html += "-----BEGIN VAULT.ENC-----\n";
+  if (vaultOk) {
+    html += vaultData;
+  }
+  html += "-----END VAULT.ENC-----\n";
+
+  html += "-----BEGIN SECRETS.ENC-----\n";
+  if (secretsOk) {
+    html += secretsData;
+  }
+  html += "-----END SECRETS.ENC-----\n";
+
+  html += "-----END SECUREVAULT BACKUP V1-----\n";
+
+  html += "</textarea>";
+
+  html += "<p><a class='btn secondary' href='/info'>Back</a></p>";
+  html += "</div>";
+
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+// =====================================================
 // Info
 // =====================================================
 
@@ -1082,6 +1162,12 @@ static void handleInfo() {
   html +=
       "<p class='muted'>Wi-Fi and TOTP settings are currently stored separately and will be "
       "hardened later.</p>";
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<h2>Backup</h2>";
+  html += "<p class='muted'>Export encrypted vault and secrets backup.</p>";
+  html += "<p><a class='btn' href='/backup_export'>Export Backup</a></p>";
   html += "</div>";
 
   html += pageFooter();
@@ -1181,7 +1267,7 @@ bool webPortalStart() {
   server.on("/delete", HTTP_GET, handleDelete);
   server.on("/delete_confirm", HTTP_GET, handleDeleteConfirm);
   server.on("/info", HTTP_GET, handleInfo);
-
+  server.on("/backup_export", HTTP_GET, handleBackupExport);
   server.on("/generate_204", HTTP_GET, handleRoot);
   server.on("/hotspot-detect.html", HTTP_GET, handleRoot);
   server.on("/ncsi.txt", HTTP_GET, handleRoot);
