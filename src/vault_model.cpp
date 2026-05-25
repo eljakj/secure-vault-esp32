@@ -4,6 +4,7 @@
 
 #include "master_key.h"
 #include "vault_secure_storage.h"
+#include "debug_log.h"
 
 extern Preferences preferences;
 
@@ -60,14 +61,14 @@ static void safeCopy(char* destination, size_t destinationSize, const char* sour
 
 static bool vaultPersistChanges() {
   if (!masterKeyIsReady()) {
-    Serial.println("Encrypted vault save: FAILED, master key not ready");
+    DEBUG_PRINTLN("Encrypted vault save: FAILED, master key not ready");
     return false;
   }
 
   bool secureOk = vaultSecureStorageSave();
 
-  Serial.print("Encrypted vault save: ");
-  Serial.println(secureOk ? "OK" : "FAILED");
+  DEBUG_PRINT("Encrypted vault save: ");
+  DEBUG_PRINTLN(secureOk ? "OK" : "FAILED");
 
   return secureOk;
 }
@@ -179,7 +180,7 @@ void vaultClearPlaintextFlash() {
   preferences.putBool("pvClear", true);
   preferences.end();
 
-  Serial.println("Plaintext vault Preferences cleared");
+  DEBUG_PRINTLN("Plaintext vault Preferences cleared");
 }
 // =====================================================
 // Vault komplett aus RAM löschen
