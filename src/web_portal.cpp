@@ -12,6 +12,7 @@
 #include "totp_manager.h"
 #include "crypto_utils.h"
 #include "secrets_secure_storage.h"
+#include "debug_log.h"
 
 extern Preferences preferences;
 
@@ -736,8 +737,8 @@ static void handleWifiSave() {
   bool secretsOk = secretsSecureStorageSave();
   wifiSettingsClearPlaintextFlash();
 
-  Serial.print("Encrypted secrets save after Wi-Fi: ");
-  Serial.println(secretsOk ? "OK" : "FAILED");
+  DEBUG_PRINT("Encrypted secrets save after Wi-Fi: ");
+  DEBUG_PRINTLN(secretsOk ? "OK" : "FAILED");
 
   String html = pageHeader("Wi-Fi Saved");
   html += "<div class='card'>";
@@ -859,8 +860,8 @@ static void handleTotpSave() {
   bool secretsOk = secretsSecureStorageSave();
   totpSettingsClearPlaintextFlash();
 
-  Serial.print("Encrypted secrets save after TOTP: ");
-  Serial.println(secretsOk ? "OK" : "FAILED");
+  DEBUG_PRINT("Encrypted secrets save after TOTP: ");
+  DEBUG_PRINTLN(secretsOk ? "OK" : "FAILED");
 
   bool ok = totpBegin();
 
@@ -899,8 +900,8 @@ static void handleTotpClear() {
   bool secretsOk = secretsSecureStorageSave();
   totpSettingsClearPlaintextFlash();
 
-  Serial.print("Encrypted secrets save after TOTP clear: ");
-  Serial.println(secretsOk ? "OK" : "FAILED");
+  DEBUG_PRINT("Encrypted secrets save after TOTP clear: ");
+  DEBUG_PRINTLN(secretsOk ? "OK" : "FAILED");
 
   String html = pageHeader("TOTP Cleared");
   html += "<div class='card'>";
