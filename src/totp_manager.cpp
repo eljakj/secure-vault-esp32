@@ -7,12 +7,10 @@
 #include "totp_settings.h"
 
 // =====================================================
-// Demo-TOTP Secret
-// WICHTIG: Für echtes Produkt nicht im Code hardcoden.
-// Später im verschlüsselten Vault speichern.
-// Demo-Secret: "Hello!" Base32 = JBSWY3DPEHPK3PXP
+// TOTP Manager
+// Berechnet TOTP Codes aus Base32 Secrets.
+// Secrets kommen aus /secrets.enc und liegen nur nach Unlock im RAM.
 // =====================================================
-
 
 static uint8_t totpSecret[64];
 static size_t totpSecretLen = 0;

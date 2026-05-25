@@ -706,11 +706,13 @@ void drawGenericDetailScreen() {
   tft.setCursor(10, 105);
 
   if (selectedMenuItem == 1) {
-    tft.println("TOTP codes will");
-    tft.println("appear here later.");
+    tft.println("TOTP accounts");
+    tft.println("are available from");
+    tft.println("the TOTP menu.");
   } else if (selectedMenuItem == 2) {
-    tft.println("Here we will add");
-    tft.println("new entries later.");
+    tft.println("Use Web Portal");
+    tft.println("to add new");
+    tft.println("vault entries.");
   }
 
   drawFooter("HOLD SEL", "BACK");
@@ -1456,7 +1458,7 @@ void performFactoryReset() {
   // Lokalen RAM-Zustand zurücksetzen
   strncpy(storedPinHash, DEFAULT_PIN_HASH, 65);
 
-  // Vault auf Demo-Standard zurücksetzen
+  // Vault und Secrets nach Factory Reset neu initialisieren
   vaultRestoreDefaultEntries();
   vaultSaveToFlash();
 
@@ -1498,7 +1500,7 @@ void performFactoryReset() {
   tft.setCursor(10, 110);
   tft.println("Factory reset done.");
   tft.println("Default PIN is now:");
-  tft.println("1234");
+  tft.println("0000");
 
   tft.setCursor(10, 165);
   tft.println("Vault is empty.");

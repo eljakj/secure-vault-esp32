@@ -1374,8 +1374,11 @@ static void handleInfo() {
   html += "<h2>Security Status</h2>";
   html += "<p class='muted'>Vault entries are stored encrypted in /vault.enc.</p>";
   html +=
-      "<p class='muted'>Wi-Fi and TOTP settings are currently stored separately and will be "
-      "hardened later.</p>";
+      "<p class='muted'>Wi-Fi credentials and TOTP secrets are stored encrypted in "
+      "/secrets.enc.</p>";
+  html +=
+      "<p class='muted'>Master key, vault RAM, Wi-Fi secrets and TOTP secrets are cleared when the "
+      "device locks.</p>";
   html += "</div>";
 
   html += "<div class='card'>";

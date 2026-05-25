@@ -4,7 +4,8 @@
 
 // =====================================================
 // Vault File Storage
-// Vorbereitung für spätere verschlüsselte Datei
+// Hilfsfunktionen für LittleFS Textdateien.
+// Wird für /vault.enc, /secrets.enc und Backup verwendet.
 // =====================================================
 
 bool vaultFileBegin();
