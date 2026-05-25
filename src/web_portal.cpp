@@ -762,27 +762,53 @@ static void handleTotpSettings() {
     return;
   }
 
+  int editIndex = -1;
+
+  if (server.hasArg("edit")) {
+    editIndex = server.arg("edit").toInt();
+
+    if (editIndex < 0 || editIndex >= totpSettingsGetCount()) {
+      editIndex = -1;
+    }
+  }
+
+  bool isEditMode = editIndex >= 0;
+
   String html = pageHeader("TOTP Settings");
 
   html += "<div class='card'>";
-  html += "<h2>Authenticator / 2FA</h2>";
-  html += "<p class='muted'>Add one Base32 TOTP secret for now. More accounts later.</p>";
+  html += "<h2>";
+  html += isEditMode ? "Edit TOTP Account" : "Add TOTP Account";
+  html += "</h2>";
+  html += "<p class='muted'>TOTP secrets are stored encrypted in /secrets.enc.</p>";
 
-  html += "<form method='POST' action='/totp_save'>";
+  html += "<form method='POST' action='";
+  html += isEditMode ? "/totp_update" : "/totp_save";
+  html += "'>";
+
+  if (isEditMode) {
+    html += "<input type='hidden' name='i' value='";
+    html += String(editIndex);
+    html += "'>";
+  }
 
   html += "<label>Label</label>";
   html += "<input name='label' maxlength='31' value='";
-  html += htmlEscape(totpSettingsGetLabel());
+
+  if (isEditMode) {
+    html += htmlEscape(totpSettingsGetLabelAt(editIndex));
+  }
+
   html += "' placeholder='Example: Gmail'>";
 
   html += "<label>Base32 Secret</label>";
 
-  if (totpSettingsHasSecret()) {
+  if (isEditMode) {
     html +=
         "<input name='secret' maxlength='127' type='password' value='' placeholder='Leave empty to "
         "keep current secret'>";
     html +=
-        "<p class='muted'>A TOTP secret is already saved. Leave this field empty to keep it.</p>";
+        "<p class='muted'>A secret is already saved for this account. Leave empty to keep it.</p>";
   } else {
     html +=
         "<input name='secret' maxlength='127' type='password' value='' placeholder='ABCD EFGH IJKL "
@@ -791,24 +817,43 @@ static void handleTotpSettings() {
   }
 
   html += "<div class='actions'>";
-  html += "<button class='btn' type='submit'>Save TOTP</button>";
-  html += "<a class='btn danger' href='/totp_clear'>Clear</a>";
-  html += "<a class='btn secondary' href='/'>Cancel</a>";
+  html += "<button class='btn' type='submit'>";
+  html += isEditMode ? "Save Changes" : "Add TOTP";
+  html += "</button>";
+  html += "<a class='btn secondary' href='/totp'>Cancel</a>";
   html += "</div>";
 
   html += "</form>";
   html += "</div>";
 
   html += "<div class='card'>";
-  html += "<h2>Status</h2>";
+  html += "<h2>Saved TOTP Accounts</h2>";
 
-  if (totpSettingsHasSecret()) {
-    html += "<p>TOTP secret is saved.</p>";
-    html += "<p><strong>Current label:</strong> ";
-    html += htmlEscape(totpSettingsGetLabel());
-    html += "</p>";
+  int count = totpSettingsGetCount();
+
+  if (count == 0) {
+    html += "<p class='muted'>No TOTP accounts saved yet.</p>";
   } else {
-    html += "<p class='muted'>No TOTP secret saved yet.</p>";
+    html += "<table><tr><th>Label</th><th>Status</th><th>Actions</th></tr>";
+
+    for (int i = 0; i < count; i++) {
+      html += "<tr>";
+      html += "<td>";
+      html += htmlEscape(totpSettingsGetLabelAt(i));
+      html += "</td>";
+      html += "<td>Secret saved</td>";
+      html += "<td>";
+      html += "<a class='btn secondary' href='/totp?edit=";
+      html += String(i);
+      html += "'>Edit</a> ";
+      html += "<a class='btn danger' href='/totp_delete?i=";
+      html += String(i);
+      html += "'>Delete</a>";
+      html += "</td>";
+      html += "</tr>";
+    }
+
+    html += "</table>";
   }
 
   html += "</div>";
@@ -839,7 +884,7 @@ static void handleTotpSave() {
     label = "TOTP";
   }
 
-  if (secret.length() == 0 && !totpSettingsHasSecret()) {
+  if (secret.length() == 0) {
     String html = pageHeader("TOTP Error");
     html += "<div class='card'>";
     html += "<h2>Base32 secret is required.</h2>";
@@ -851,36 +896,121 @@ static void handleTotpSave() {
     return;
   }
 
-  if (secret.length() == 0 && totpSettingsHasSecret()) {
-    totpSettingsSetRam(label.c_str(), totpSettingsGetBase32Secret());
-  } else {
-    totpSettingsSetRam(label.c_str(), secret.c_str());
+  bool added = totpSettingsAddAccount(label.c_str(), secret.c_str());
+
+  if (!added) {
+    String html = pageHeader("TOTP Error");
+    html += "<div class='card'>";
+    html += "<h2>Could not add TOTP account.</h2>";
+    html += "<p class='muted'>Storage may be full or secret is empty.</p>";
+    html += urlBack();
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
   }
 
   bool secretsOk = secretsSecureStorageSave();
   totpSettingsClearPlaintextFlash();
 
-  DEBUG_PRINT("Encrypted secrets save after TOTP: ");
+  DEBUG_PRINT("Encrypted secrets save after TOTP add: ");
   DEBUG_PRINTLN(secretsOk ? "OK" : "FAILED");
 
-  bool ok = totpBegin();
+  totpBegin();
 
-  String html = pageHeader("TOTP Saved");
-  html += "<div class='card'>";
+  server.sendHeader("Location", "/totp");
+  server.send(303);
+}
 
-  if (ok) {
-    html += "<h2>TOTP settings saved.</h2>";
-    html += "<p class='muted'>Now open TOTP on the device and sync time if needed.</p>";
-  } else {
-    html += "<h2>TOTP saved, but secret looks invalid.</h2>";
-    html += "<p class='muted'>Check the Base32 secret.</p>";
+static void handleTotpUpdate() {
+  webPortalMarkActivity();
+
+  if (!requirePortalLogin()) {
+    return;
   }
 
-  html += "<p><a class='btn' href='/totp'>Back to TOTP</a></p>";
-  html += "</div>";
-  html += pageFooter();
+  if (!server.hasArg("i")) {
+    server.send(400, "text/plain", "Missing index");
+    return;
+  }
 
-  server.send(200, "text/html", html);
+  int index = server.arg("i").toInt();
+
+  String label = server.arg("label");
+  String secret = server.arg("secret");
+
+  label.trim();
+  secret.trim();
+
+  if (label.length() == 0) {
+    label = "TOTP";
+  }
+
+  bool updated = totpSettingsUpdateAccount(index, label.c_str(), secret.c_str());
+
+  if (!updated) {
+    String html = pageHeader("TOTP Error");
+    html += "<div class='card'>";
+    html += "<h2>Could not update TOTP account.</h2>";
+    html += urlBack();
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
+  }
+
+  bool secretsOk = secretsSecureStorageSave();
+  totpSettingsClearPlaintextFlash();
+
+  DEBUG_PRINT("Encrypted secrets save after TOTP update: ");
+  DEBUG_PRINTLN(secretsOk ? "OK" : "FAILED");
+
+  totpBegin();
+
+  server.sendHeader("Location", "/totp");
+  server.send(303);
+}
+
+static void handleTotpDelete() {
+  webPortalMarkActivity();
+
+  if (!requirePortalLogin()) {
+    return;
+  }
+
+  if (!server.hasArg("i")) {
+    server.send(400, "text/plain", "Missing index");
+    return;
+  }
+
+  int index = server.arg("i").toInt();
+
+  bool deleted = totpSettingsDeleteAccount(index);
+
+  if (!deleted) {
+    String html = pageHeader("TOTP Error");
+    html += "<div class='card'>";
+    html += "<h2>Could not delete TOTP account.</h2>";
+    html += urlBack();
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
+  }
+
+  bool secretsOk = secretsSecureStorageSave();
+  totpSettingsClearPlaintextFlash();
+
+  DEBUG_PRINT("Encrypted secrets save after TOTP delete: ");
+  DEBUG_PRINTLN(secretsOk ? "OK" : "FAILED");
+
+  totpBegin();
+
+  server.sendHeader("Location", "/totp");
+  server.send(303);
 }
 
 // =====================================================
@@ -1043,6 +1173,8 @@ bool webPortalStart() {
   server.on("/wifi_save", HTTP_POST, handleWifiSave);
   server.on("/totp", HTTP_GET, handleTotpSettings);
   server.on("/totp_save", HTTP_POST, handleTotpSave);
+  server.on("/totp_update", HTTP_POST, handleTotpUpdate);
+  server.on("/totp_delete", HTTP_GET, handleTotpDelete);
   server.on("/totp_clear", HTTP_GET, handleTotpClear);
   server.on("/save_add", HTTP_POST, handleSaveAdd);
   server.on("/save_edit", HTTP_POST, handleSaveEdit);
