@@ -14,6 +14,7 @@
 #include "secrets_secure_storage.h"
 #include "debug_log.h"
 #include "vault_file.h"
+#include "vault_secure_storage.h"
 
 extern Preferences preferences;
 
@@ -1124,6 +1125,219 @@ static void handleBackupExport() {
 }
 
 // =====================================================
+// Backup Import Helfer
+// =====================================================
+
+static bool extractBackupSection(const String& backup, const char* beginMarker,
+                                 const char* endMarker, String& output) {
+  output = "";
+
+  int beginIndex = backup.indexOf(beginMarker);
+  int endIndex = backup.indexOf(endMarker);
+
+  if (beginIndex < 0 || endIndex < 0 || endIndex <= beginIndex) {
+    return false;
+  }
+
+  beginIndex += strlen(beginMarker);
+
+  if (beginIndex < backup.length() && backup[beginIndex] == '\r') {
+    beginIndex++;
+  }
+
+  if (beginIndex < backup.length() && backup[beginIndex] == '\n') {
+    beginIndex++;
+  }
+
+  output = backup.substring(beginIndex, endIndex);
+
+  while (output.endsWith("\n") || output.endsWith("\r")) {
+    output.remove(output.length() - 1);
+  }
+
+  return output.length() > 0;
+}
+
+// =====================================================
+// Backup Import Formular
+// =====================================================
+
+static void handleBackupImportForm() {
+  webPortalMarkActivity();
+
+  if (!requirePortalLogin()) {
+    return;
+  }
+
+  String html = pageHeader("Backup Import");
+
+  html += "<div class='card'>";
+  html += "<h2>Import Encrypted Backup</h2>";
+  html +=
+      "<p class='muted'>Paste a SecureVault backup below. This overwrites the current encrypted "
+      "vault and secrets files.</p>";
+  html += "<p class='muted'>Only import backups you created yourself.</p>";
+  html += "</div>";
+
+  html += "<div class='card'>";
+  html += "<form method='POST' action='/backup_import_submit'>";
+
+  html += "<label>Backup Text</label>";
+  html +=
+      "<textarea name='backup' "
+      "style='width:100%;height:360px;box-sizing:border-box;border-radius:12px;background:#0e0e0e;"
+      "color:#fff;border:1px solid "
+      "#333;padding:12px;font-family:monospace;font-size:12px;'></textarea>";
+
+  html += "<label>Type IMPORT to confirm</label>";
+  html += "<input name='confirm' maxlength='10' placeholder='IMPORT'>";
+
+  html += "<div class='actions'>";
+  html += "<button class='btn danger' type='submit'>Import Backup</button>";
+  html += "<a class='btn secondary' href='/info'>Cancel</a>";
+  html += "</div>";
+
+  html += "</form>";
+  html += "</div>";
+
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+// =====================================================
+// Backup Import ausführen
+// =====================================================
+
+static void handleBackupImportSubmit() {
+  webPortalMarkActivity();
+
+  if (!requirePortalLogin()) {
+    return;
+  }
+
+  String confirm = server.arg("confirm");
+  confirm.trim();
+
+  if (confirm != "IMPORT") {
+    String html = pageHeader("Import Cancelled");
+    html += "<div class='card'>";
+    html += "<h2>Import was not confirmed.</h2>";
+    html += "<p class='muted'>You must type IMPORT exactly.</p>";
+    html += "<p><a class='btn secondary' href='/backup_import'>Back</a></p>";
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
+  }
+
+  String backup = server.arg("backup");
+
+  String vaultData = "";
+  String secretsData = "";
+
+  bool vaultFound = extractBackupSection(backup, "-----BEGIN VAULT.ENC-----",
+                                         "-----END VAULT.ENC-----", vaultData);
+
+  bool secretsFound = extractBackupSection(backup, "-----BEGIN SECRETS.ENC-----",
+                                           "-----END SECRETS.ENC-----", secretsData);
+
+  if (!vaultFound || !secretsFound) {
+    String html = pageHeader("Import Error");
+    html += "<div class='card'>";
+    html += "<h2>Backup format is invalid.</h2>";
+    html += "<p class='muted'>Missing vault.enc or secrets.enc section.</p>";
+    html += "<p><a class='btn secondary' href='/backup_import'>Back</a></p>";
+    html += "</div>";
+    html += pageFooter();
+
+    server.send(200, "text/html", html);
+    return;
+  }
+
+  // Alte Dateien merken, damit wir bei Fehler rollback machen können.
+  String oldVaultData = "";
+  String oldSecretsData = "";
+
+  bool oldVaultOk = vaultFileReadText("/vault.enc", oldVaultData);
+  bool oldSecretsOk = vaultFileReadText("/secrets.enc", oldSecretsData);
+
+  bool vaultWriteOk = vaultFileWriteText("/vault.enc", vaultData);
+  bool secretsWriteOk = vaultFileWriteText("/secrets.enc", secretsData);
+
+  bool vaultLoadOk = false;
+  bool secretsLoadOk = false;
+  bool rollbackDone = false;
+
+  if (vaultWriteOk && secretsWriteOk) {
+    vaultLoadOk = vaultSecureStorageLoad();
+    secretsLoadOk = secretsSecureStorageLoad();
+    totpBegin();
+  }
+
+  bool importOk = vaultWriteOk && secretsWriteOk && vaultLoadOk && secretsLoadOk;
+
+  if (!importOk) {
+    // Rollback: alte funktionierende Dateien zurückschreiben.
+    if (oldVaultOk) {
+      vaultFileWriteText("/vault.enc", oldVaultData);
+    }
+
+    if (oldSecretsOk) {
+      vaultFileWriteText("/secrets.enc", oldSecretsData);
+    }
+
+    if (oldVaultOk || oldSecretsOk) {
+      vaultSecureStorageLoad();
+      secretsSecureStorageLoad();
+      totpBegin();
+      rollbackDone = true;
+    }
+  }
+
+  String html = pageHeader(importOk ? "Backup Imported" : "Import Failed");
+
+  html += "<div class='card'>";
+  html += "<h2>Import Result</h2>";
+
+  html += "<p><strong>Write vault.enc:</strong> ";
+  html += vaultWriteOk ? "OK" : "FAILED";
+  html += "</p>";
+
+  html += "<p><strong>Write secrets.enc:</strong> ";
+  html += secretsWriteOk ? "OK" : "FAILED";
+  html += "</p>";
+
+  html += "<p><strong>Load vault:</strong> ";
+  html += vaultLoadOk ? "OK" : "FAILED";
+  html += "</p>";
+
+  html += "<p><strong>Load secrets:</strong> ";
+  html += secretsLoadOk ? "OK" : "FAILED";
+  html += "</p>";
+
+  html += "<p><strong>Rollback:</strong> ";
+  html += rollbackDone ? "DONE" : "NOT NEEDED";
+  html += "</p>";
+
+  if (importOk) {
+    html += "<p class='muted'>Backup imported and loaded successfully.</p>";
+  } else {
+    html +=
+        "<p class='muted'>Backup could not be loaded with the current PIN/key. Old data was "
+        "restored if available.</p>";
+  }
+
+  html += "<p><a class='btn' href='/'>Back to Vault</a></p>";
+  html += "</div>";
+
+  html += pageFooter();
+
+  server.send(200, "text/html", html);
+}
+
+// =====================================================
 // Info
 // =====================================================
 
@@ -1167,7 +1381,10 @@ static void handleInfo() {
   html += "<div class='card'>";
   html += "<h2>Backup</h2>";
   html += "<p class='muted'>Export encrypted vault and secrets backup.</p>";
-  html += "<p><a class='btn' href='/backup_export'>Export Backup</a></p>";
+  html += "<div class='actions'>";
+  html += "<a class='btn' href='/backup_export'>Export Backup</a>";
+  html += "<a class='btn danger' href='/backup_import'>Import Backup</a>";
+  html += "</div>";
   html += "</div>";
 
   html += pageFooter();
@@ -1268,6 +1485,8 @@ bool webPortalStart() {
   server.on("/delete_confirm", HTTP_GET, handleDeleteConfirm);
   server.on("/info", HTTP_GET, handleInfo);
   server.on("/backup_export", HTTP_GET, handleBackupExport);
+  server.on("/backup_import", HTTP_GET, handleBackupImportForm);
+  server.on("/backup_import_submit", HTTP_POST, handleBackupImportSubmit);
   server.on("/generate_204", HTTP_GET, handleRoot);
   server.on("/hotspot-detect.html", HTTP_GET, handleRoot);
   server.on("/ncsi.txt", HTTP_GET, handleRoot);
