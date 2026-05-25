@@ -88,17 +88,36 @@ static String secretsSerializeToText() {
   output += escapeValue(wifiSettingsGetPassword());
   output += "\n";
 
-  output += "totp_label=";
-  output += escapeValue(totpSettingsGetLabel());
+  int totpCount = totpSettingsGetCount();
+
+  if (totpCount < 0) {
+    totpCount = 0;
+  }
+
+  if (totpCount > MAX_TOTP_ACCOUNTS) {
+    totpCount = MAX_TOTP_ACCOUNTS;
+  }
+
+  output += "totp_count=";
+  output += String(totpCount);
   output += "\n";
 
-  output += "totp_secret=";
-  output += escapeValue(totpSettingsGetBase32Secret());
-  output += "\n";
+  for (int i = 0; i < totpCount; i++) {
+    output += "totp_";
+    output += String(i);
+    output += "_label=";
+    output += escapeValue(totpSettingsGetLabelAt(i));
+    output += "\n";
+
+    output += "totp_";
+    output += String(i);
+    output += "_secret=";
+    output += escapeValue(totpSettingsGetBase32SecretAt(i));
+    output += "\n";
+  }
 
   return output;
 }
-
 // =====================================================
 // Eine key=value Zeile lesen
 // =====================================================
@@ -154,16 +173,57 @@ static bool secretsDeserializeFromText(const String& data) {
 
   String wifiSsid = "";
   String wifiPassword = "";
-  String totpLabel = "";
-  String totpSecret = "";
 
   readValueByKey(data, "wifi_ssid", wifiSsid);
   readValueByKey(data, "wifi_password", wifiPassword);
-  readValueByKey(data, "totp_label", totpLabel);
-  readValueByKey(data, "totp_secret", totpSecret);
 
   wifiSettingsSetRam(wifiSsid.c_str(), wifiPassword.c_str());
-  totpSettingsSetRam(totpLabel.c_str(), totpSecret.c_str());
+
+  // Erst alles löschen, dann TOTP Accounts neu aus Datei setzen.
+  totpSettingsClearRam();
+
+  String countText = "";
+
+  if (readValueByKey(data, "totp_count", countText)) {
+    int count = countText.toInt();
+
+    if (count < 0) {
+      count = 0;
+    }
+
+    if (count > MAX_TOTP_ACCOUNTS) {
+      count = MAX_TOTP_ACCOUNTS;
+    }
+
+    for (int i = 0; i < count; i++) {
+      String labelKey = "totp_" + String(i) + "_label";
+      String secretKey = "totp_" + String(i) + "_secret";
+
+      String label = "";
+      String secret = "";
+
+      readValueByKey(data, labelKey.c_str(), label);
+      readValueByKey(data, secretKey.c_str(), secret);
+
+      if (secret.length() > 0) {
+        totpSettingsSetAccountRam(i, label.c_str(), secret.c_str());
+      }
+    }
+
+    return true;
+  }
+
+  // Backward compatibility:
+  // Alte /secrets.enc Version mit nur einem TOTP Account.
+  String oldTotpLabel = "";
+  String oldTotpSecret = "";
+
+  readValueByKey(data, "totp_label", oldTotpLabel);
+  readValueByKey(data, "totp_secret", oldTotpSecret);
+
+  if (oldTotpSecret.length() > 0) {
+    totpSettingsSetRam(oldTotpLabel.c_str(), oldTotpSecret.c_str());
+  }
 
   return true;
 }
@@ -199,7 +259,7 @@ bool secretsSecureStorageSave() {
   bool writeOk = vaultFileWriteText(SECRETS_ENCRYPTED_PATH, encryptedSecrets);
 
   if (!writeOk) {
-    Serial.println("secretsSecureStorageSave: file write failed");
+    DEBUG_PRINTLN("secretsSecureStorageSave: file write failed");
     return false;
   }
 
