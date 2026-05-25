@@ -84,6 +84,23 @@ unsigned long lastUserActivityTime = 0;
 
 int selectedTotpAccount = 0;
 
+void normalizeSelectedTotpAccount() {
+  int count = totpSettingsGetCount();
+
+  if (count <= 0) {
+    selectedTotpAccount = 0;
+    return;
+  }
+
+  if (selectedTotpAccount < 0) {
+    selectedTotpAccount = 0;
+  }
+
+  if (selectedTotpAccount >= count) {
+    selectedTotpAccount = count - 1;
+  }
+}
+
 // =====================================================
 // Menü-Daten
 // =====================================================
@@ -1127,6 +1144,8 @@ void drawKeyboardLayoutScreen() {
 void drawTotpView(bool syncing, const char* message) {
   currentScreen = SCREEN_TOTP_VIEW;
 
+  normalizeSelectedTotpAccount();
+
   int totpCount = totpSettingsGetCount();
 
   if (totpCount <= 0) {
@@ -1250,6 +1269,8 @@ void typeCurrentTotpCode() {
     drawTotpView(false, "Time not synced.");
     return;
   }
+
+  normalizeSelectedTotpAccount();
 
   int totpCount = totpSettingsGetCount();
 
@@ -2326,6 +2347,7 @@ void handleTotpInput(ButtonEvent event) {
       }
     }
 
+    normalizeSelectedTotpAccount();
     drawTotpView(false, "");
   }
 
