@@ -451,8 +451,32 @@ void checkPin() {
         wifiSettingsClearPlaintextFlash();
         totpSettingsClearPlaintextFlash();
       } else {
+        Serial.println("Encrypted secrets could not be decrypted.");
+
+      #if SECUREVAULT_DEV_MODE
+        // DEV-Modus:
+        // Nur fuer Entwicklung/Test erlaubt.
+        // Wenn PIN/Key geaendert wurde oder die Datei kaputt ist,
+        // erstellen wir leere encrypted secrets neu.
+        Serial.println("DEV MODE: removing old encrypted secrets and creating empty secrets.");
+
+        secretsSecureStorageRemove();
+
         wifiSettingsClearRam();
         totpSettingsClearRam();
+
+        bool secretsSaved = secretsSecureStorageSave();
+
+        Serial.print("Create new encrypted secrets: ");
+        Serial.println(secretsSaved ? "OK" : "FAILED");
+      #else
+        // Produktmodus:
+        // Niemals automatisch loeschen.
+        Serial.println("PRODUCT MODE: secrets kept. Manual recovery required.");
+
+        wifiSettingsClearRam();
+        totpSettingsClearRam();
+      #endif
       }
     } else {
       // Einmalige Migration:
