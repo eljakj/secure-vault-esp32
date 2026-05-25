@@ -1,11 +1,39 @@
+# PlatformIO build/output
 .pio/
+.pioenvs/
+.piolibdeps/
+.cache/
+
+# VS Code local files
 .vscode/.browse.c_cpp.db*
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch/
-.DS_Store
-Thumbs.db
+
+# Build artifacts
 *.bin
 *.elf
 *.map
+*.hex
+*.uf2
 *.log
+
+# Local backups / exports
+*.backup
+*.bak
+*.tmp
+*.enc
+vault.enc
+secrets.enc
+vault_test.txt
+vault_test.enc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+secrets.*
+wifi.*
