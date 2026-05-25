@@ -18,6 +18,7 @@
 #include "vault_crypto.h"
 #include "vault_secure_storage.h"
 #include "secrets_secure_storage.h"
+#include "debug_log.h"
 
 // =====================================================
 // Globale Objekte
@@ -444,21 +445,21 @@ void checkPin() {
     if (secretsSecureStorageExists()) {
       bool secretsLoaded = secretsSecureStorageLoad();
 
-      Serial.print("Load encrypted secrets: ");
-      Serial.println(secretsLoaded ? "OK" : "FAILED");
+      DEBUG_PRINT("Load encrypted secrets: ");
+      DEBUG_PRINTLN(secretsLoaded ? "OK" : "FAILED");
 
       if (secretsLoaded) {
         wifiSettingsClearPlaintextFlash();
         totpSettingsClearPlaintextFlash();
       } else {
-        Serial.println("Encrypted secrets could not be decrypted.");
+        DEBUG_PRINTLN("Encrypted secrets could not be decrypted.");
 
-      #if SECUREVAULT_DEV_MODE
+#if SECUREVAULT_DEV_MODE
         // DEV-Modus:
         // Nur fuer Entwicklung/Test erlaubt.
         // Wenn PIN/Key geaendert wurde oder die Datei kaputt ist,
         // erstellen wir leere encrypted secrets neu.
-        Serial.println("DEV MODE: removing old encrypted secrets and creating empty secrets.");
+        DEBUG_PRINTLN("DEV MODE: removing old encrypted secrets and creating empty secrets.");
 
         secretsSecureStorageRemove();
 
@@ -467,16 +468,16 @@ void checkPin() {
 
         bool secretsSaved = secretsSecureStorageSave();
 
-        Serial.print("Create new encrypted secrets: ");
-        Serial.println(secretsSaved ? "OK" : "FAILED");
-      #else
+        DEBUG_PRINT("Create new encrypted secrets: ");
+        DEBUG_PRINTLN(secretsSaved ? "OK" : "FAILED");
+#else
         // Produktmodus:
         // Niemals automatisch loeschen.
-        Serial.println("PRODUCT MODE: secrets kept. Manual recovery required.");
+        DEBUG_PRINTLN("PRODUCT MODE: secrets kept. Manual recovery required.");
 
         wifiSettingsClearRam();
         totpSettingsClearRam();
-      #endif
+#endif
       }
     } else {
       // Einmalige Migration:
@@ -486,8 +487,8 @@ void checkPin() {
 
       bool secretsSaved = secretsSecureStorageSave();
 
-      Serial.print("Create encrypted secrets: ");
-      Serial.println(secretsSaved ? "OK" : "FAILED");
+      DEBUG_PRINT("Create encrypted secrets: ");
+      DEBUG_PRINTLN(secretsSaved ? "OK" : "FAILED");
 
       if (secretsSaved) {
         wifiSettingsClearPlaintextFlash();
@@ -500,33 +501,33 @@ void checkPin() {
     if (vaultSecureStorageExists()) {
       bool loadedEncryptedVault = vaultSecureStorageLoad();
 
-      Serial.print("Load encrypted vault: ");
-      Serial.println(loadedEncryptedVault ? "OK" : "FAILED");
+      DEBUG_PRINT("Load encrypted vault: ");
+      DEBUG_PRINTLN(loadedEncryptedVault ? "OK" : "FAILED");
 
       if (loadedEncryptedVault) {
         vaultClearPlaintextFlash();
       } else {
-        Serial.println("Encrypted vault could not be decrypted.");
+        DEBUG_PRINTLN("Encrypted vault could not be decrypted.");
 
 #if SECUREVAULT_DEV_MODE
         // DEV-Modus:
         // Nur fuer Entwicklung/Test erlaubt.
         // Wenn PIN/Key geaendert wurde, kann die alte /vault.enc nicht mehr entschluesselt werden.
         // Dann loeschen wir die alte Test-Datei und erstellen einen neuen leeren Vault.
-        Serial.println("DEV MODE: removing old encrypted vault and creating a new empty vault.");
+        DEBUG_PRINTLN("DEV MODE: removing old encrypted vault and creating a new empty vault.");
 
         vaultSecureStorageRemove();
         vaultRestoreDefaultEntries();
 
         bool savedEncryptedVault = vaultSecureStorageSave();
 
-        Serial.print("Create new encrypted vault: ");
-        Serial.println(savedEncryptedVault ? "OK" : "FAILED");
+        DEBUG_PRINT("Create new encrypted vault: ");
+        DEBUG_PRINTLN(savedEncryptedVault ? "OK" : "FAILED");
 #else
         // Produktmodus:
         // Niemals automatisch loeschen.
         // User muss bewusst Factory Reset / Recovery machen.
-        Serial.println("PRODUCT MODE: vault kept. Manual recovery required.");
+        DEBUG_PRINTLN("PRODUCT MODE: vault kept. Manual recovery required.");
         vaultRestoreDefaultEntries();
 #endif
       }
@@ -535,8 +536,8 @@ void checkPin() {
 
       bool savedEncryptedVault = vaultSecureStorageSave();
 
-      Serial.print("Create encrypted vault: ");
-      Serial.println(savedEncryptedVault ? "OK" : "FAILED");
+      DEBUG_PRINT("Create encrypted vault: ");
+      DEBUG_PRINTLN(savedEncryptedVault ? "OK" : "FAILED");
     }
     deviceUnlocked = true;
 
@@ -875,7 +876,7 @@ void saveNewPin() {
     tft.println("Vault encrypted");
     tft.println("with new PIN.");
 
-    Serial.println("PIN changed and vault/secrets re-encrypted: OK");
+    DEBUG_PRINTLN("PIN changed and vault/secrets re-encrypted: OK");
   } else {
     drawHeader("PIN Error", "Vault not saved");
 
@@ -888,7 +889,7 @@ void saveNewPin() {
     tft.println("");
     tft.println("Do not power off.");
 
-    Serial.println("PIN changed but vault/secrets re-encryption FAILED");
+    DEBUG_PRINTLN("PIN changed but vault/secrets re-encryption FAILED");
   }
 
   drawFooter("HOLD SEL", "BACK");
