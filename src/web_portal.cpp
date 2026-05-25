@@ -1411,7 +1411,9 @@ static void handleNotFoundQuietly() {
       uri == "/site.webmanifest" || uri == "/browserconfig.xml" || uri == "/apple-touch-icon.png" ||
       uri == "/apple-touch-icon-precomposed.png" || uri == "/apple-touch-icon-120x120.png" ||
       uri == "/apple-touch-icon-152x152.png" || uri == "/apple-touch-icon-180x180.png" ||
-      uri == "/android-chrome-192x192.png" || uri == "/android-chrome-512x512.png") {
+      uri == "/android-chrome-192x192.png" || uri == "/android-chrome-512x512.png" ||
+      uri == "/generate_204" || uri == "/hotspot-detect.html" || uri == "/ncsi.txt" ||
+      uri == "/connecttest.txt" || uri == "/fwlink" || uri == "/success.txt") {
     server.send(204, "text/plain", "");
     return;
   }
@@ -1487,9 +1489,12 @@ bool webPortalStart() {
   server.on("/backup_export", HTTP_GET, handleBackupExport);
   server.on("/backup_import", HTTP_GET, handleBackupImportForm);
   server.on("/backup_import_submit", HTTP_POST, handleBackupImportSubmit);
-  server.on("/generate_204", HTTP_GET, handleRoot);
-  server.on("/hotspot-detect.html", HTTP_GET, handleRoot);
-  server.on("/ncsi.txt", HTTP_GET, handleRoot);
+  server.on("/generate_204", HTTP_ANY, handleEmptyResponse);
+  server.on("/hotspot-detect.html", HTTP_ANY, handleEmptyResponse);
+  server.on("/ncsi.txt", HTTP_ANY, handleEmptyResponse);
+  server.on("/connecttest.txt", HTTP_ANY, handleEmptyResponse);
+  server.on("/fwlink", HTTP_ANY, handleEmptyResponse);
+  server.on("/success.txt", HTTP_ANY, handleEmptyResponse);
 
   server.onNotFound(handleNotFoundQuietly);
   server.begin();
