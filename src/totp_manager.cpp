@@ -162,8 +162,19 @@ bool totpIsTimeValid() {
 // Aktuellen TOTP-Code berechnen
 // =====================================================
 
-uint32_t totpGetCurrentCode() {
-  if (!totpIsTimeValid() || totpSecretLen == 0) {
+uint32_t totpGenerateCodeFromBase32(const char* base32Secret) {
+  if (!totpIsTimeValid()) {
+    return 0;
+  }
+
+  if (base32Secret == nullptr || strlen(base32Secret) == 0) {
+    return 0;
+  }
+
+  uint8_t localSecret[64];
+  size_t localSecretLen = decodeBase32(base32Secret, localSecret, sizeof(localSecret));
+
+  if (localSecretLen == 0) {
     return 0;
   }
 
@@ -186,22 +197,29 @@ uint32_t totpGetCurrentCode() {
 
   mbedtls_md_init(&ctx);
   mbedtls_md_setup(&ctx, info, 1);
-  mbedtls_md_hmac_starts(&ctx, totpSecret, totpSecretLen);
+  mbedtls_md_hmac_starts(&ctx, localSecret, localSecretLen);
   mbedtls_md_hmac_update(&ctx, counterBytes, 8);
   mbedtls_md_hmac_finish(&ctx, hmacResult);
   mbedtls_md_free(&ctx);
 
   int offset = hmacResult[19] & 0x0F;
 
-  uint32_t binary =
-    ((hmacResult[offset] & 0x7F) << 24) |
-    ((hmacResult[offset + 1] & 0xFF) << 16) |
-    ((hmacResult[offset + 2] & 0xFF) << 8) |
-    (hmacResult[offset + 3] & 0xFF);
+  uint32_t binary = ((hmacResult[offset] & 0x7F) << 24) | ((hmacResult[offset + 1] & 0xFF) << 16) |
+                    ((hmacResult[offset + 2] & 0xFF) << 8) | (hmacResult[offset + 3] & 0xFF);
+
+  memset(localSecret, 0, sizeof(localSecret));
+  memset(hmacResult, 0, sizeof(hmacResult));
 
   return binary % 1000000;
 }
 
+uint32_t totpGetCurrentCode() {
+  if (totpSecretLen == 0) {
+    return 0;
+  }
+
+  return totpGenerateCodeFromBase32(totpSettingsGetBase32Secret());
+}
 // =====================================================
 // Sekunden bis zum nächsten Code
 // =====================================================
