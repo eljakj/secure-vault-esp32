@@ -259,46 +259,131 @@ static String urlBack() {
 
 static String pageHeader(const String& title) {
   String html = "";
-  html +=
-      "<!doctype html><html><head><meta name='viewport' "
-      "content='width=device-width,initial-scale=1'>";
+
+  html += "<!doctype html><html><head>";
+  html += "<meta name='viewport' content='width=device-width,initial-scale=1'>";
   html += "<title>SecureVault</title>";
+
   html += "<style>";
-  html +=
-      "body{margin:0;background:#0b0b0b;color:#f5f5f5;font-family:Arial,sans-serif;padding:18px;}";
+
+  html += "*{box-sizing:border-box;}";
+  html += "body{";
+  html += "margin:0;";
+  html += "background:#0b0f17;";
+  html += "color:#f5f7fb;";
+  html += "font-family:Arial,sans-serif;";
+  html += "padding:18px;";
+  html += "}";
+
   html += ".wrap{max-width:980px;margin:0 auto;}";
-  html += "h1{font-size:28px;margin:0 0 18px;text-align:center;}";
-  html += "h2{font-size:20px;margin:0 0 14px;}";
-  html +=
-      ".card{background:#161616;border:1px solid "
-      "#2a2a2a;border-radius:18px;padding:18px;margin-bottom:16px;}";
-  html += "label{display:block;margin:12px 0 6px;color:#d0d0d0;font-weight:700;}";
-  html +=
-      "input,select{width:100%;box-sizing:border-box;padding:13px;border-radius:12px;border:1px "
-      "solid #333;background:#0e0e0e;color:#fff;font-size:16px;}";
+
+  html += "h1{";
+  html += "font-size:28px;";
+  html += "margin:0 0 18px;";
+  html += "text-align:center;";
+  html += "}";
+
+  html += "h2{";
+  html += "font-size:20px;";
+  html += "margin:0 0 14px;";
+  html += "}";
+
+  html += ".card{";
+  html += "background:#151b26;";
+  html += "border:1px solid #263244;";
+  html += "border-radius:18px;";
+  html += "padding:18px;";
+  html += "margin-bottom:16px;";
+  html += "}";
+
+  html += "label{";
+  html += "display:block;";
+  html += "margin:12px 0 6px;";
+  html += "color:#cbd5e1;";
+  html += "font-weight:700;";
+  html += "}";
+
+  html += "input,select,textarea{";
+  html += "width:100%;";
+  html += "padding:13px;";
+  html += "border-radius:12px;";
+  html += "border:1px solid #334155;";
+  html += "background:#0f172a;";
+  html += "color:#fff;";
+  html += "font-size:16px;";
+  html += "}";
+
+  html += "textarea{min-height:260px;font-family:monospace;font-size:12px;}";
+
   html += "table{width:100%;border-collapse:collapse;}";
-  html +=
-      "th,td{border-bottom:1px solid #2a2a2a;padding:12px "
-      "8px;text-align:left;vertical-align:middle;}";
-  html += "th{color:#aaa;font-size:13px;text-transform:uppercase;}";
-  html += ".actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}";
-  html +=
-      ".btn{display:inline-block;border:0;border-radius:12px;padding:11px "
-      "14px;background:#2979ff;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;}";
-  html += ".danger{background:#d32f2f;}";
-  html += ".secondary{background:#444;}";
-  html += ".muted{color:#aaa;font-size:14px;}";
-  html += ".top{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;}";
+  html += "th,td{";
+  html += "border-bottom:1px solid #263244;";
+  html += "padding:12px 8px;";
+  html += "text-align:left;";
+  html += "vertical-align:middle;";
+  html += "}";
+
+  html += "th{";
+  html += "color:#94a3b8;";
+  html += "font-size:13px;";
+  html += "text-transform:uppercase;";
+  html += "}";
+
+  html += ".actions{";
+  html += "display:flex;";
+  html += "gap:8px;";
+  html += "flex-wrap:wrap;";
+  html += "margin-top:14px;";
+  html += "}";
+
+  html += ".btn{";
+  html += "display:inline-block;";
+  html += "border:0;";
+  html += "border-radius:12px;";
+  html += "padding:11px 14px;";
+  html += "background:#2563eb;";
+  html += "color:#fff;";
+  html += "text-decoration:none;";
+  html += "font-weight:700;";
+  html += "cursor:pointer;";
+  html += "}";
+
+  html += ".secondary{background:#475569;}";
+  html += ".danger{background:#dc2626;}";
+  html += ".muted{color:#94a3b8;font-size:14px;line-height:1.45;}";
+
+  html += ".top{";
+  html += "display:flex;";
+  html += "gap:10px;";
+  html += "flex-wrap:wrap;";
+  html += "justify-content:center;";
+  html += "margin-bottom:16px;";
+  html += "}";
+
+  html += "@media(max-width:720px){";
+  html += "body{padding:14px;}";
+  html += ".card{padding:16px;}";
+  html += ".btn{width:auto;}";
+  html += ".actions .btn{flex:1 1 auto;text-align:center;}";
+  html += "table{font-size:14px;}";
+  html += "th,td{padding:10px 6px;}";
+  html += "}";
+
   html += "</style></head><body><div class='wrap'>";
-  html += "<h1>" + title + "</h1>";
+
+  html += "<h1>";
+  html += title;
+  html += "</h1>";
+
   html += "<div class='top'>";
   html += "<a class='btn' href='/'>Vault</a>";
   html += "<a class='btn' href='/add'>Add Entry</a>";
-  html += "<a class='btn secondary' href='/wifi'>Wi-Fi</a>";
   html += "<a class='btn secondary' href='/totp'>TOTP</a>";
+  html += "<a class='btn secondary' href='/wifi'>Wi-Fi</a>";
   html += "<a class='btn secondary' href='/info'>Info</a>";
   html += "<a class='btn danger' href='/logout'>Logout</a>";
   html += "</div>";
+
   return html;
 }
 
